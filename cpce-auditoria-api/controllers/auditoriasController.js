@@ -1,34 +1,84 @@
 ﻿const { executeQuery } = require('../config/database');
 
 const auditoriasController = {
-    
     // AUDITORÍAS PENDIENTES - Reemplaza auditar.php
     getPendientes: async (req, res) => {
         try {
             const { rol } = req.user; // Del JWT token
+            const { search = '', page = 1, limit = 10 } = req.query;
 
+            // Construir consulta base
             let sql = `SELECT a.id, b.apellido, b.nombre, b.dni, 
-                       DATE_FORMAT(a.fecha_origen, '%d-%m-%Y') AS fecha, 
-                       CONCAT(c.nombre, ' ', c.apellido,' MP-',c.matricula) AS medico, 
-                       a.renglones, a.cantmeses AS meses, a.auditado 
-                       FROM rec_auditoria a 
-                       INNER JOIN rec_paciente b ON a.idpaciente=b.id 
-                       INNER JOIN tmp_person c ON a.idprescriptor=c.matricula 
-                       INNER JOIN rec_receta d ON a.idreceta1=d.idreceta 
-                       WHERE a.renglones>0 AND a.auditado IS NULL AND idobrasoc = 20`;
+                   DATE_FORMAT(a.fecha_origen, '%d-%m-%Y') AS fecha, 
+                   CONCAT(c.nombre, ' ', c.apellido,' MP-',c.matricula) AS medico, 
+                   a.renglones, a.cantmeses AS meses, a.auditado 
+                   FROM rec_auditoria a 
+                   INNER JOIN rec_paciente b ON a.idpaciente=b.id 
+                   INNER JOIN tmp_person c ON a.idprescriptor=c.matricula 
+                   INNER JOIN rec_receta d ON a.idreceta1=d.idreceta 
+                   WHERE a.renglones>0 AND a.auditado IS NULL AND idobrasoc = 20`;
 
             // Si el rol es 9 (médico auditor), solo ver las bloqueadas
             if (rol == 9) {
                 sql += " AND a.bloqueadaxauditor IS NOT NULL";
             }
 
+            // Agregar búsqueda si existe
+            let params = [];
+            if (search && search.trim()) {
+                sql += " AND (b.apellido LIKE ? OR b.nombre LIKE ? OR b.dni LIKE ? OR CONCAT(c.nombre, ' ', c.apellido) LIKE ?)";
+                const searchParam = `%${search.trim()}%`;
+                params.push(searchParam, searchParam, searchParam, searchParam);
+            }
+
+            // 1. PRIMERO: Consulta para contar total de registros
+            let countSql = `SELECT COUNT(*) as total 
+                        FROM rec_auditoria a 
+                        INNER JOIN rec_paciente b ON a.idpaciente=b.id 
+                        INNER JOIN tmp_person c ON a.idprescriptor=c.matricula 
+                        INNER JOIN rec_receta d ON a.idreceta1=d.idreceta 
+                        WHERE a.renglones>0 AND a.auditado IS NULL AND idobrasoc = 20`;
+
+            // Si el rol es 9 (médico auditor), agregar también a count
+            if (rol == 9) {
+                countSql += " AND a.bloqueadaxauditor IS NOT NULL";
+            }
+
+            // Agregar búsqueda al count también
+            if (search && search.trim()) {
+                countSql += " AND (b.apellido LIKE ? OR b.nombre LIKE ? OR b.dni LIKE ? OR CONCAT(c.nombre, ' ', c.apellido) LIKE ?)";
+            }
+
+            console.log('Count SQL:', countSql);
+            console.log('Params:', params);
+
+            const countResult = await executeQuery(countSql, params);
+            const total = countResult[0]?.total || 0;
+            const totalPages = Math.ceil(total / limit);
+
+            console.log('Count result:', countResult);
+            console.log('Total encontrado:', total);
+            console.log('Total páginas:', totalPages);
+
+            // 2. SEGUNDO: Agregar ordenamiento y paginación a la consulta principal
             sql += " ORDER BY d.fechaemision ASC";
 
-            const resultados = await executeQuery(sql);
+            const offset = (page - 1) * limit;
+            sql += ` LIMIT ${parseInt(limit)} OFFSET ${parseInt(offset)}`;
+
+            console.log('Data SQL:', sql);
+
+            const resultados = await executeQuery(sql, params);
+
+            console.log('Resultados encontrados:', resultados.length);
 
             res.json({
                 success: true,
-                data: resultados
+                data: resultados,
+                total: total,
+                page: parseInt(page),
+                limit: parseInt(limit),
+                totalPages: totalPages
             });
 
         } catch (error) {
@@ -343,7 +393,7 @@ const auditoriasController = {
             });
         }
     },
-    
+
     // OBTENER DATOS COMPLETOS PARA AUDITAR - Reemplaza audi_trataprolongado.php
     getAuditoriaCompleta: async (req, res) => {
         try {
@@ -360,7 +410,7 @@ const auditoriasController = {
             // Verificar bloqueo por médico auditor
             const sqlBloqueo = "SELECT bloqueadaxauditor FROM rec_auditoria WHERE id = ?";
             const bloqueoResult = await executeQuery(sqlBloqueo, [id]);
-            
+
             const botonesDeshabilitados = rol != 9 && bloqueoResult[0]?.bloqueadaxauditor != null;
 
             // Datos del paciente - pac_encabezado_s.php
@@ -475,13 +525,13 @@ const auditoriasController = {
     procesarAuditoria: async (req, res) => {
         try {
             const { id } = req.params;
-            const { 
-                chequedos, 
-                nochequeados, 
+            const {
+                chequedos,
+                nochequeados,
                 cobert1, cobert2, cobert3, cobert4,
                 cobert2_1, cobert2_2, cobert2_3, cobert2_4,
-                nota, 
-                estadoIdentidad 
+                nota,
+                estadoIdentidad
             } = req.body;
 
             const { idauditor } = req.user;
@@ -496,16 +546,16 @@ const auditoriasController = {
                 // Procesar medicamentos aprobados
                 if (chequedos) {
                     const arrayAprobados = chequedos.split(',');
-                    
+
                     for (const elemento of arrayAprobados) {
                         const [nroReceta, renglon] = elemento.split('-');
-                        
+
                         if (!nroReceta || !renglon) continue;
 
                         // Seleccionar cobertura según renglón
                         let cobertura = '50';
                         let cobertura2 = 'BIAC';
-                        
+
                         switch (renglon) {
                             case '1':
                                 cobertura = cobert1 || '50';
@@ -535,9 +585,9 @@ const auditoriasController = {
                                                idauditoria = ?,
                                                pendiente_farmalink = 1
                                          WHERE idreceta = ? AND nro_orden = ?`;
-                        
+
                         await connection.execute(sqlAprobado, [
-                            fechaActual, idauditor, ipauditor, cobertura, 
+                            fechaActual, idauditor, ipauditor, cobertura,
                             cobertura2, id, nroReceta, renglon
                         ]);
                     }
@@ -546,10 +596,10 @@ const auditoriasController = {
                 // Procesar medicamentos NO aprobados
                 if (nochequeados) {
                     const arrayRechazados = nochequeados.split(',');
-                    
+
                     for (const elemento of arrayRechazados) {
                         const [nroReceta, renglon] = elemento.split('-');
-                        
+
                         if (!nroReceta || !renglon) continue;
 
                         const sqlRechazado = `UPDATE rec_prescrmedicamento 
@@ -562,7 +612,7 @@ const auditoriasController = {
                                                 idauditoria = ?,
                                                 pendiente_farmalink = 0  
                                           WHERE idreceta = ? AND nro_orden = ?`;
-                        
+
                         await connection.execute(sqlRechazado, [
                             fechaActual, idauditor, ipauditor, id, nroReceta, renglon
                         ]);
@@ -577,7 +627,7 @@ const auditoriasController = {
                                         necesita_farmalink = ?,
                                         ultima_modificacion = ?
                                   WHERE id = ?`;
-                
+
                 await connection.execute(sqlAuditoria, [
                     nota || '', idauditor, chequedos ? 1 : 0, fechaActual, id
                 ]);
@@ -619,7 +669,7 @@ const auditoriasController = {
                         SET bloqueadaxauditor = ?, 
                             fecha_bloqueo = ?
                       WHERE id = ?`;
-            
+
             await executeQuery(sql, [idauditor, fechaActual, id]);
 
             res.json({
@@ -662,7 +712,7 @@ const auditoriasController = {
                                        fecha_reversion = ?,
                                        revertido_por = ?
                                  WHERE id = ?`;
-                
+
                 await executeQuery(sqlRevertir, [nota || '', fechaActual, idauditor, id]);
 
                 // Resetear medicamentos
@@ -673,7 +723,7 @@ const auditoriasController = {
                                             porcentajecobertura = NULL,
                                             cobertura2 = NULL
                                       WHERE idauditoria = ?`;
-                
+
                 await executeQuery(sqlMedicamentos, [id]);
 
                 res.json({
@@ -690,30 +740,30 @@ const auditoriasController = {
                                      fecha_eliminacion = ?,
                                      eliminado_por = ?
                                WHERE id = ?`;
-                
+
                 await executeQuery(sqlBorrar, [nota || '', fechaActual, idauditor, id]);
 
                 res.json({
                     success: true,
                     message: 'Auditoría marcada como eliminada',
                     idauditoria: id
-               });
+                });
 
-           } else {
-               res.status(400).json({
-                   error: true,
-                   message: 'Acción no válida'
-               });
-           }
+            } else {
+                res.status(400).json({
+                    error: true,
+                    message: 'Acción no válida'
+                });
+            }
 
-       } catch (error) {
-           console.error('Error en revertir/borrar auditoría:', error);
-           res.status(500).json({
-               error: true,
-               message: 'Error interno del servidor'
-           });
-       }
-   }
+        } catch (error) {
+            console.error('Error en revertir/borrar auditoría:', error);
+            res.status(500).json({
+                error: true,
+                message: 'Error interno del servidor'
+            });
+        }
+    }
 };
 
 module.exports = auditoriasController;
