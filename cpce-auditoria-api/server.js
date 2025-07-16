@@ -7,19 +7,35 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware de seguridad
-app.use(helmet());
-
-// Configurar CORS para el frontend React
+// CORS PRIMERO - antes que Helmet
 app.use(cors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-    credentials: true
+    origin: [
+        'http://localhost:5173', 
+        'http://127.0.0.1:5173',
+        'http://localhost:3000',
+        'http://127.0.0.1:3000'
+    ],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 
-// Rate limiting - limitar solicitudes por IP
+// Helmet configuración más permisiva para desarrollo
+app.use(helmet({
+    crossOriginEmbedderPolicy: false,
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            connectSrc: ["'self'", "http://localhost:5173", "http://127.0.0.1:5173"]
+        }
+    }
+}));
+
+// Rate limiting
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutos
-    max: 100, // máximo 100 requests por IP cada 15 min
+    max: 100,
     message: 'Demasiadas solicitudes, intenta de nuevo más tarde'
 });
 app.use('/api/', limiter);
@@ -62,4 +78,3 @@ app.listen(PORT, () => {
     console.log('🚀 Servidor corriendo en puerto ' + PORT);
     console.log('📱 Health check: http://localhost:' + PORT + '/api/health');
 });
-

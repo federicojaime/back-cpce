@@ -1,364 +1,466 @@
 ﻿{
-  "info": {
-    "name": "CPCE Auditoria API - FINAL",
-    "description": "Colección COMPLETA para probar la API de Sistema de Auditorías CPCE",
-    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
-  },
-  "variable": [
-    {
-      "key": "base_url",
-      "value": "http://localhost:3000/api",
-      "type": "string"
-    },
-    {
-      "key": "jwt_token",
-      "value": "",
-      "type": "string"
-    },
-    {
-      "key": "auditoria_id",
-      "value": "1",
-      "type": "string"
-    }
-  ],
-  "item": [
-    {
-      "name": "AUTH",
-      "item": [
-        {
-          "name": "1. Health Check",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/health",
-              "host": ["{{base_url}}"],
-              "path": ["health"]
-            }
-          }
-        },
-        {
-          "name": "2. Login",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "if (pm.response.code === 200) {",
-                  "    const responseJson = pm.response.json();",
-                  "    if (responseJson.token) {",
-                  "        pm.collectionVariables.set('jwt_token', responseJson.token);",
-                  "        console.log('Token guardado');",
-                  "    }",
-                  "}"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n    \"username\": \"tu_usuario\",\n    \"password\": \"tu_password\"\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/auth/login",
-              "host": ["{{base_url}}"],
-              "path": ["auth", "login"]
-            }
-          }
-        },
-        {
-          "name": "3. Get Profile",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{jwt_token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/auth/profile",
-              "host": ["{{base_url}}"],
-              "path": ["auth", "profile"]
-            }
-          }
-        },
-        {
-          "name": "4. Change Password",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n    \"username\": \"tu_usuario\",\n    \"dni\": \"12345678\",\n    \"password_nuevo\": \"nueva_password123\",\n    \"password_nuevo_repetir\": \"nueva_password123\"\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/auth/change-password",
-              "host": ["{{base_url}}"],
-              "path": ["auth", "change-password"]
-            }
-          }
-        },
-        {
-          "name": "5. Logout",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{jwt_token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/auth/logout",
-              "host": ["{{base_url}}"],
-              "path": ["auth", "logout"]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "AUDITORIAS - LISTADOS",
-      "item": [
-        {
-          "name": "1. Auditorías Pendientes",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{jwt_token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/auditorias/pendientes",
-              "host": ["{{base_url}}"],
-              "path": ["auditorias", "pendientes"]
-            }
-          }
-        },
-        {
-          "name": "2. Auditorías Históricas",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{jwt_token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/auditorias/historicas",
-              "host": ["{{base_url}}"],
-              "path": ["auditorias", "historicas"]
-            }
-          }
-        },
-        {
-          "name": "3. Listado con Filtros",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{jwt_token}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n    \"dni\": \"12345678\",\n    \"fechaDesde\": \"2024-01-01\",\n    \"fechaHasta\": \"2024-12-31\"\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/auditorias/listado",
-              "host": ["{{base_url}}"],
-              "path": ["auditorias", "listado"]
-            }
-          }
-        },
-        {
-          "name": "4. Historial de Paciente",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{jwt_token}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n    \"dni\": \"12345678\",\n    \"fechaDesde\": \"2024-01-01\",\n    \"fechaHasta\": \"2024-12-31\"\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/auditorias/paciente",
-              "host": ["{{base_url}}"],
-              "path": ["auditorias", "paciente"]
-            }
-          }
-        },
-        {
-          "name": "5. Generar Excel por Mes",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{jwt_token}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n    \"fecha\": \"2024-12\"\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/auditorias/excel",
-              "host": ["{{base_url}}"],
-              "path": ["auditorias", "excel"]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "AUDITORIAS - PROCESAMIENTO",
-      "item": [
-        {
-          "name": "1. Obtener Auditoría para Procesar",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{jwt_token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/auditorias/{{auditoria_id}}",
-              "host": ["{{base_url}}"],
-              "path": ["auditorias", "{{auditoria_id}}"]
-            }
-          }
-        },
-        {
-          "name": "2. Procesar Auditoría (Aprobar/Denegar)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{jwt_token}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n    \"chequedos\": \"123-1,124-2\",\n    \"nochequeados\": \"125-1\",\n    \"cobert1\": \"70\",\n    \"cobert2\": \"50\",\n    \"cobert3\": \"100\",\n    \"cobert4\": \"50\",\n    \"cobert2_1\": \"BIAC\",\n    \"cobert2_2\": \"CE\",\n    \"cobert2_3\": \"ONC\",\n    \"cobert2_4\": \"BIAC\",\n    \"nota\": \"Auditoría procesada correctamente\",\n    \"estadoIdentidad\": 0\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/auditorias/{{auditoria_id}}/procesar",
-              "host": ["{{base_url}}"],
-              "path": ["auditorias", "{{auditoria_id}}", "procesar"]
-            }
-          }
-        },
-        {
-          "name": "3. Enviar a Médico Auditor",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{jwt_token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/auditorias/{{auditoria_id}}/enviar-medico",
-              "host": ["{{base_url}}"],
-              "path": ["auditorias", "{{auditoria_id}}", "enviar-medico"]
-            }
-          }
-        },
-        {
-          "name": "4. Revertir Auditoría",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{jwt_token}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n    \"accion\": \"1\",\n    \"nota\": \"Revertir por error en el procesamiento\"\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/auditorias/{{auditoria_id}}/revertir-borrar",
-              "host": ["{{base_url}}"],
-              "path": ["auditorias", "{{auditoria_id}}", "revertir-borrar"]
-            }
-          }
-        },
-        {
-          "name": "5. Borrar Auditoría",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{jwt_token}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n    \"accion\": \"2\",\n    \"nota\": \"Auditoría duplicada - eliminar\"\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/auditorias/{{auditoria_id}}/revertir-borrar",
-              "host": ["{{base_url}}"],
-              "path": ["auditorias", "{{auditoria_id}}", "revertir-borrar"]
-            }
-          }
-        }
-      ]
-    }
-  ]
+    "info":  {
+                 "name":  "CPCE Auditoria API - FINAL",
+                 "description":  "Colección COMPLETA para probar la API de Sistema de Auditorías CPCE",
+                 "schema":  "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+             },
+    "variable":  [
+                     {
+                         "key":  "base_url",
+                         "value":  "http://localhost:3000/api",
+                         "type":  "string"
+                     },
+                     {
+                         "key":  "jwt_token",
+                         "value":  "",
+                         "type":  "string"
+                     },
+                     {
+                         "key":  "auditoria_id",
+                         "value":  "1",
+                         "type":  "string"
+                     }
+                 ],
+    "item":  [
+                 {
+                     "name":  "AUTH",
+                     "item":  [
+                                  {
+                                      "name":  "1. Health Check",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/health",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "health"
+                                                                           ]
+                                                              }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "2. Login",
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "if (pm.response.code === 200) {",
+                                                                                    "    const responseJson = pm.response.json();",
+                                                                                    "    if (responseJson.token) {",
+                                                                                    "        pm.collectionVariables.set(\u0027jwt_token\u0027, responseJson.token);",
+                                                                                    "        console.log(\u0027Token guardado\u0027);",
+                                                                                    "    }",
+                                                                                    "}"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ],
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n    \"username\": \"tu_usuario\",\n    \"password\": \"tu_password\"\n}"
+                                                               },
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/auth/login",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "auth",
+                                                                               "login"
+                                                                           ]
+                                                              }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "3. Get Profile",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{jwt_token}}"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/auth/profile",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "auth",
+                                                                               "profile"
+                                                                           ]
+                                                              }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "4. Change Password",
+                                      "request":  {
+                                                      "method":  "PUT",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n    \"username\": \"tu_usuario\",\n    \"dni\": \"12345678\",\n    \"password_nuevo\": \"nueva_password123\",\n    \"password_nuevo_repetir\": \"nueva_password123\"\n}"
+                                                               },
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/auth/change-password",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "auth",
+                                                                               "change-password"
+                                                                           ]
+                                                              }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "5. Logout",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{jwt_token}}"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/auth/logout",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "auth",
+                                                                               "logout"
+                                                                           ]
+                                                              }
+                                                  }
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "AUDITORIAS - LISTADOS",
+                     "item":  [
+                                  {
+                                      "name":  "1. Auditorías Pendientes",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{jwt_token}}"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/auditorias/pendientes",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "auditorias",
+                                                                               "pendientes"
+                                                                           ]
+                                                              }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "2. Auditorías Históricas",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{jwt_token}}"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/auditorias/historicas",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "auditorias",
+                                                                               "historicas"
+                                                                           ]
+                                                              }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "3. Listado con Filtros",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     },
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{jwt_token}}"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n    \"dni\": \"12345678\",\n    \"fechaDesde\": \"2024-01-01\",\n    \"fechaHasta\": \"2024-12-31\"\n}"
+                                                               },
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/auditorias/listado",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "auditorias",
+                                                                               "listado"
+                                                                           ]
+                                                              }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "4. Historial de Paciente",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     },
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{jwt_token}}"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n    \"dni\": \"12345678\",\n    \"fechaDesde\": \"2024-01-01\",\n    \"fechaHasta\": \"2024-12-31\"\n}"
+                                                               },
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/auditorias/paciente",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "auditorias",
+                                                                               "paciente"
+                                                                           ]
+                                                              }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "5. Generar Excel por Mes",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     },
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{jwt_token}}"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n    \"fecha\": \"2024-12\"\n}"
+                                                               },
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/auditorias/excel",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "auditorias",
+                                                                               "excel"
+                                                                           ]
+                                                              }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "6. Auditorías Médicas (Solo Rol 9)",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "url":  {
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "raw":  "{{base_url}}/auditorias/medicas",
+                                                                  "path":  [
+                                                                               "auditorias",
+                                                                               "medicas"
+                                                                           ]
+                                                              },
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{jwt_token}}"
+                                                                     }
+                                                                 ]
+                                                  }
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "AUDITORIAS - PROCESAMIENTO",
+                     "item":  [
+                                  {
+                                      "name":  "1. Obtener Auditoría para Procesar",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{jwt_token}}"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/auditorias/{{auditoria_id}}",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "auditorias",
+                                                                               "{{auditoria_id}}"
+                                                                           ]
+                                                              }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "2. Procesar Auditoría (Aprobar/Denegar)",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     },
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{jwt_token}}"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n    \"chequedos\": \"123-1,124-2\",\n    \"nochequeados\": \"125-1\",\n    \"cobert1\": \"70\",\n    \"cobert2\": \"50\",\n    \"cobert3\": \"100\",\n    \"cobert4\": \"50\",\n    \"cobert2_1\": \"BIAC\",\n    \"cobert2_2\": \"CE\",\n    \"cobert2_3\": \"ONC\",\n    \"cobert2_4\": \"BIAC\",\n    \"nota\": \"Auditoría procesada correctamente\",\n    \"estadoIdentidad\": 0\n}"
+                                                               },
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/auditorias/{{auditoria_id}}/procesar",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "auditorias",
+                                                                               "{{auditoria_id}}",
+                                                                               "procesar"
+                                                                           ]
+                                                              }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "3. Enviar a Médico Auditor",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{jwt_token}}"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/auditorias/{{auditoria_id}}/enviar-medico",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "auditorias",
+                                                                               "{{auditoria_id}}",
+                                                                               "enviar-medico"
+                                                                           ]
+                                                              }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "4. Revertir Auditoría",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     },
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{jwt_token}}"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n    \"accion\": \"1\",\n    \"nota\": \"Revertir por error en el procesamiento\"\n}"
+                                                               },
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/auditorias/{{auditoria_id}}/revertir-borrar",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "auditorias",
+                                                                               "{{auditoria_id}}",
+                                                                               "revertir-borrar"
+                                                                           ]
+                                                              }
+                                                  }
+                                  },
+                                  {
+                                      "name":  "5. Borrar Auditoría",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     },
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{jwt_token}}"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n    \"accion\": \"2\",\n    \"nota\": \"Auditoría duplicada - eliminar\"\n}"
+                                                               },
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/auditorias/{{auditoria_id}}/revertir-borrar",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "auditorias",
+                                                                               "{{auditoria_id}}",
+                                                                               "revertir-borrar"
+                                                                           ]
+                                                              }
+                                                  }
+                                  }
+                              ]
+                 }
+             ]
 }

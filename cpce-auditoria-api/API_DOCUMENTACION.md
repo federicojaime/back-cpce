@@ -152,6 +152,35 @@ Revertir o eliminar auditoría
 
 ---
 
+
+### GET /api/auditorias/medicas
+Obtener auditorías médicas pendientes (solo para médicos auditores - rol 9)
+
+**Permisos requeridos:** Médico auditor (rol 9)
+
+**Respuesta:**
+```json
+{
+    "success": true,
+    "data": [
+        {
+            "id": "123",
+            "apellido": "Pérez",
+            "nombre": "Juan",
+            "dni": "12345678",
+            "fecha": "01-12-2024",
+            "medico": "Dr. García MP-12345",
+            "renglones": 3,
+            "meses": 6,
+            "auditado": null,
+            "fecha_bloqueo": "15-12-2024 14:30"
+        }
+    ],
+    "message": "Encontradas 5 auditorías médicas pendientes"
+}
+```
+
+---
 ## 🔧 ROLES Y PERMISOS
 
 - **Rol 9**: Médico auditor (solo ve auditorías bloqueadas)
@@ -189,3 +218,4 @@ Revertir o eliminar auditoría
 | `audi_trataprolongado.php` | `GET /api/auditorias/:id` | Datos para auditar |
 | `audi_grabar_s.php` | `POST /api/auditorias/:id/procesar` | Procesar auditoría |
 | `back_excel1.php` | `POST /api/auditorias/excel` | Generar Excel |
+

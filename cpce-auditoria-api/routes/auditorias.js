@@ -21,7 +21,6 @@ router.post('/paciente', auditoriasController.getHistorialPaciente);
 // POST /api/auditorias/excel - Generar reporte Excel por mes
 router.post('/excel', auditoriasController.generarExcel);
 
-
 // GET /api/auditorias/:id - Obtener datos completos para auditar
 router.get('/:id', auditoriasController.getAuditoriaCompleta);
 
@@ -35,4 +34,3 @@ router.post('/:id/enviar-medico', auditoriasController.enviarMedicoAuditor);
 router.post('/:id/revertir-borrar', auditoriasController.revertirBorrarAuditoria);
 
 module.exports = router;
-

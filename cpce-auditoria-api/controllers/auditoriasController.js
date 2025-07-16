@@ -342,7 +342,7 @@ const auditoriasController = {
                 message: 'Error interno del servidor'
             });
         }
-    }
+    },
     
     // OBTENER DATOS COMPLETOS PARA AUDITAR - Reemplaza audi_trataprolongado.php
     getAuditoriaCompleta: async (req, res) => {
@@ -697,24 +697,23 @@ const auditoriasController = {
                     success: true,
                     message: 'Auditoría marcada como eliminada',
                     idauditoria: id
-                });
+               });
 
-            } else {
-                res.status(400).json({
-                    error: true,
-                    message: 'Acción no válida'
-                });
-            }
+           } else {
+               res.status(400).json({
+                   error: true,
+                   message: 'Acción no válida'
+               });
+           }
 
-        } catch (error) {
-            console.error('Error en revertir/borrar auditoría:', error);
-            res.status(500).json({
-                error: true,
-                message: 'Error interno del servidor'
-            });
-        }
-    }
+       } catch (error) {
+           console.error('Error en revertir/borrar auditoría:', error);
+           res.status(500).json({
+               error: true,
+               message: 'Error interno del servidor'
+           });
+       }
+   }
 };
 
 module.exports = auditoriasController;
-
