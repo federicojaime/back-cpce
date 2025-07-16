@@ -15,6 +15,7 @@ import HistorialPaciente from './pages/HistorialPaciente';
 import DescargarExcel from './pages/DescargarExcel';
 import Vademecum from './pages/Vademecum';
 import ProcesarAuditoria from './pages/ProcesarAuditoria';
+import VerAuditoriaHistorica from './pages/VerAuditoriaHistorica';
 
 // Componente para rutas protegidas
 const ProtectedRoute = ({ children }) => {
@@ -136,6 +137,18 @@ function AppContent() {
             <ProcesarAuditoria />
           </ProtectedRoute>
         } 
+      />
+
+      {/* Nueva ruta para ver auditoría histórica */}
+      <Route
+        path="/auditoria/:id/historica"
+        element={
+            <ProtectedRoute>
+                <Layout>
+                    <VerAuditoriaHistorica />
+                </Layout>
+            </ProtectedRoute>
+        }
       />
 
       {/* Rutas de administración/configuración */}
