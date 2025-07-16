@@ -259,7 +259,7 @@ const auditoriasController = {
         }
     },
 
-    // HISTORIAL DE PACIENTE - Reemplaza historialpaciente_s.php
+    // HISTORIAL DE PACIENTE - Reemplaza historialpaciente_s.php - CORREGIDO
     getHistorialPaciente: async (req, res) => {
         try {
             const { dni, fechaDesde, fechaHasta } = req.body;
@@ -271,6 +271,7 @@ const auditoriasController = {
                 });
             }
 
+            // CONSULTA CORREGIDA - removido e.estado y e.observacion que no existen
             let sql = `SELECT DISTINCT 
                        CONCAT(
                            CONCAT(UPPER(SUBSTRING(b.apellido, 1, 1)), LOWER(SUBSTRING(b.apellido, 2))), ' ',
@@ -279,7 +280,7 @@ const auditoriasController = {
                        b.dni, b.sexo, b.fecnac, b.talla, b.peso, b.telefono, b.email,
                        a.id, e.nro_orden,
                        DATE_FORMAT(e.fecha_auditoria, '%d-%m-%Y') AS fecha_auditoria,
-                       e.estado, e.observacion,
+                       e.estado_auditoria, 
                        CONCAT(
                            CONCAT(UPPER(SUBSTRING(c.nombre, 1, 1)), LOWER(SUBSTRING(c.nombre, 2))), ' ',
                            CONCAT(UPPER(SUBSTRING(c.apellido, 1, 1)), LOWER(SUBSTRING(c.apellido, 2))), ' MP-', c.matricula
@@ -318,6 +319,56 @@ const auditoriasController = {
             console.error('Error obteniendo historial del paciente:', error);
             res.status(500).json({
                 error: true,
+                message: 'Error interno del servidor',
+                details: error.message
+            });
+        }
+    },
+
+    // AUDITORÍAS MÉDICAS PENDIENTES - Para médicos auditores (rol 9)
+    getAuditoriasMedicas: async (req, res) => {
+        try {
+            const { rol } = req.user;
+
+            // Solo médicos auditores pueden acceder
+            if (rol != 9) {
+                return res.status(403).json({
+                    error: true,
+                    message: 'Acceso denegado. Solo médicos auditores pueden ver esta información.'
+                });
+            }
+
+            const sql = `SELECT a.id, 
+                        CONCAT(UPPER(SUBSTRING(b.apellido, 1, 1)), LOWER(SUBSTRING(b.apellido, 2))) AS apellido,
+                        CONCAT(UPPER(SUBSTRING(b.nombre, 1, 1)), LOWER(SUBSTRING(b.nombre, 2))) AS nombre,
+                        b.dni, 
+                        DATE_FORMAT(a.fecha_origen, '%d-%m-%Y') AS fecha, 
+                        CONCAT(
+                            CONCAT(UPPER(SUBSTRING(c.nombre, 1, 1)), LOWER(SUBSTRING(c.nombre, 2))), ' ',
+                            CONCAT(UPPER(SUBSTRING(c.apellido, 1, 1)), LOWER(SUBSTRING(c.apellido, 2))), ' MP-', c.matricula
+                        ) AS medico, 
+                        a.renglones, a.cantmeses AS meses, a.auditado,
+                        DATE_FORMAT(a.bloqueadaxauditor, '%d-%m-%Y %H:%i') AS fecha_bloqueo
+                        FROM rec_auditoria a 
+                        INNER JOIN rec_paciente b ON a.idpaciente=b.id 
+                        INNER JOIN tmp_person c ON a.idprescriptor=c.matricula 
+                        INNER JOIN rec_receta d ON a.idreceta1=d.idreceta 
+                        WHERE a.renglones>0 AND a.auditado IS NULL AND a.idobrasoc = 20
+                        AND a.bloqueadaxauditor IS NOT NULL
+                        ORDER BY a.bloqueadaxauditor DESC`;
+
+            const resultados = await executeQuery(sql);
+
+            res.json({
+                success: true,
+                data: resultados,
+                message: `Encontradas ${resultados.length} auditorías médicas pendientes`
+            });
+
+        } catch (error) {
+            console.error('Error obteniendo auditorías médicas:', error);
+            res.status(500).json({
+                error: true,
                 message: 'Error interno del servidor'
             });
         }
@@ -326,7 +377,7 @@ const auditoriasController = {
     // DESCARGAR EXCEL - Reemplaza descargar_excel.php
     generarExcel: async (req, res) => {
         try {
-            const { fecha } = req.params; // formato: YYYY-MM
+            const { fecha } = req.body; // formato: YYYY-MM
             
             // Validar formato de fecha
             if (!/^\d{4}-\d{2}$/.test(fecha)) {
@@ -349,8 +400,7 @@ const auditoriasController = {
                              CONCAT(UPPER(SUBSTRING(c.nombre, 1, 1)), LOWER(SUBSTRING(c.nombre, 2))), ' ',
                              CONCAT(UPPER(SUBSTRING(c.apellido, 1, 1)), LOWER(SUBSTRING(c.apellido, 2)))
                          ) AS medico, c.matricula,
-                         d.nombrecomercial AS medicamento, d.presentacion,
-                         e.cantidad, e.estado, e.observacion,
+                         e.estado_auditoria,
                          DATE_FORMAT(a.fecha_origen, '%d-%m-%Y') AS fecha_receta,
                          DATE_FORMAT(e.fecha_auditoria, '%d-%m-%Y') AS fecha_auditoria,
                          CONCAT(
@@ -361,7 +411,6 @@ const auditoriasController = {
                          INNER JOIN rec_paciente b ON a.idpaciente = b.id 
                          INNER JOIN tmp_person c ON a.idprescriptor = c.matricula 
                          INNER JOIN rec_prescrmedicamento e ON a.idreceta1 = e.idreceta
-                         INNER JOIN rec_medicamento d ON e.idmedicamento = d.id
                          LEFT JOIN user_au f ON a.auditadopor = f.id 
                          WHERE a.fecha_origen BETWEEN ? AND ? 
                          AND a.auditado IS NOT NULL 
@@ -501,7 +550,6 @@ const auditoriasController = {
                         pm.cantprescripta AS cantidad,
                         pm.nro_orden,
                         pm.estado_auditoria AS estado,
-                        pm.observacion,
                         DATE_FORMAT(pm.fecha_auditoria, '%d-%m-%Y') AS fecha_auditoria_simple
                     FROM rec_prescrmedicamento pm
                     WHERE pm.idreceta IN (${placeholders})
@@ -530,8 +578,7 @@ const auditoriasController = {
                     idmedicamento: med.idmedicamento,
                     nombrecomercial: `Medicamento ${med.idmedicamento}`, // Por ahora mostrar el ID
                     cantidad: med.cantidad,
-                    estado: med.estado,
-                    observacion: med.observacion
+                    estado: med.estado
                 });
             });
 

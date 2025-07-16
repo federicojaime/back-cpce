@@ -1,466 +1,900 @@
 ﻿{
-    "info":  {
-                 "name":  "CPCE Auditoria API - FINAL",
-                 "description":  "Colección COMPLETA para probar la API de Sistema de Auditorías CPCE",
-                 "schema":  "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
-             },
-    "variable":  [
-                     {
-                         "key":  "base_url",
-                         "value":  "http://localhost:3000/api",
-                         "type":  "string"
-                     },
-                     {
-                         "key":  "jwt_token",
-                         "value":  "",
-                         "type":  "string"
-                     },
-                     {
-                         "key":  "auditoria_id",
-                         "value":  "1",
-                         "type":  "string"
-                     }
-                 ],
-    "item":  [
-                 {
-                     "name":  "AUTH",
-                     "item":  [
-                                  {
-                                      "name":  "1. Health Check",
-                                      "request":  {
-                                                      "method":  "GET",
-                                                      "header":  [
-
-                                                                 ],
-                                                      "url":  {
-                                                                  "raw":  "{{base_url}}/health",
-                                                                  "host":  [
-                                                                               "{{base_url}}"
-                                                                           ],
-                                                                  "path":  [
-                                                                               "health"
-                                                                           ]
-                                                              }
-                                                  }
-                                  },
-                                  {
-                                      "name":  "2. Login",
-                                      "event":  [
-                                                    {
-                                                        "listen":  "test",
-                                                        "script":  {
-                                                                       "type":  "text/javascript",
-                                                                       "exec":  [
-                                                                                    "if (pm.response.code === 200) {",
-                                                                                    "    const responseJson = pm.response.json();",
-                                                                                    "    if (responseJson.token) {",
-                                                                                    "        pm.collectionVariables.set(\u0027jwt_token\u0027, responseJson.token);",
-                                                                                    "        console.log(\u0027Token guardado\u0027);",
-                                                                                    "    }",
-                                                                                    "}"
-                                                                                ]
-                                                                   }
-                                                    }
-                                                ],
-                                      "request":  {
-                                                      "method":  "POST",
-                                                      "header":  [
-                                                                     {
-                                                                         "key":  "Content-Type",
-                                                                         "value":  "application/json"
-                                                                     }
-                                                                 ],
-                                                      "body":  {
-                                                                   "mode":  "raw",
-                                                                   "raw":  "{\n    \"username\": \"tu_usuario\",\n    \"password\": \"tu_password\"\n}"
-                                                               },
-                                                      "url":  {
-                                                                  "raw":  "{{base_url}}/auth/login",
-                                                                  "host":  [
-                                                                               "{{base_url}}"
-                                                                           ],
-                                                                  "path":  [
-                                                                               "auth",
-                                                                               "login"
-                                                                           ]
-                                                              }
-                                                  }
-                                  },
-                                  {
-                                      "name":  "3. Get Profile",
-                                      "request":  {
-                                                      "method":  "GET",
-                                                      "header":  [
-                                                                     {
-                                                                         "key":  "Authorization",
-                                                                         "value":  "Bearer {{jwt_token}}"
-                                                                     }
-                                                                 ],
-                                                      "url":  {
-                                                                  "raw":  "{{base_url}}/auth/profile",
-                                                                  "host":  [
-                                                                               "{{base_url}}"
-                                                                           ],
-                                                                  "path":  [
-                                                                               "auth",
-                                                                               "profile"
-                                                                           ]
-                                                              }
-                                                  }
-                                  },
-                                  {
-                                      "name":  "4. Change Password",
-                                      "request":  {
-                                                      "method":  "PUT",
-                                                      "header":  [
-                                                                     {
-                                                                         "key":  "Content-Type",
-                                                                         "value":  "application/json"
-                                                                     }
-                                                                 ],
-                                                      "body":  {
-                                                                   "mode":  "raw",
-                                                                   "raw":  "{\n    \"username\": \"tu_usuario\",\n    \"dni\": \"12345678\",\n    \"password_nuevo\": \"nueva_password123\",\n    \"password_nuevo_repetir\": \"nueva_password123\"\n}"
-                                                               },
-                                                      "url":  {
-                                                                  "raw":  "{{base_url}}/auth/change-password",
-                                                                  "host":  [
-                                                                               "{{base_url}}"
-                                                                           ],
-                                                                  "path":  [
-                                                                               "auth",
-                                                                               "change-password"
-                                                                           ]
-                                                              }
-                                                  }
-                                  },
-                                  {
-                                      "name":  "5. Logout",
-                                      "request":  {
-                                                      "method":  "POST",
-                                                      "header":  [
-                                                                     {
-                                                                         "key":  "Authorization",
-                                                                         "value":  "Bearer {{jwt_token}}"
-                                                                     }
-                                                                 ],
-                                                      "url":  {
-                                                                  "raw":  "{{base_url}}/auth/logout",
-                                                                  "host":  [
-                                                                               "{{base_url}}"
-                                                                           ],
-                                                                  "path":  [
-                                                                               "auth",
-                                                                               "logout"
-                                                                           ]
-                                                              }
-                                                  }
-                                  }
-                              ]
-                 },
-                 {
-                     "name":  "AUDITORIAS - LISTADOS",
-                     "item":  [
-                                  {
-                                      "name":  "1. Auditorías Pendientes",
-                                      "request":  {
-                                                      "method":  "GET",
-                                                      "header":  [
-                                                                     {
-                                                                         "key":  "Authorization",
-                                                                         "value":  "Bearer {{jwt_token}}"
-                                                                     }
-                                                                 ],
-                                                      "url":  {
-                                                                  "raw":  "{{base_url}}/auditorias/pendientes",
-                                                                  "host":  [
-                                                                               "{{base_url}}"
-                                                                           ],
-                                                                  "path":  [
-                                                                               "auditorias",
-                                                                               "pendientes"
-                                                                           ]
-                                                              }
-                                                  }
-                                  },
-                                  {
-                                      "name":  "2. Auditorías Históricas",
-                                      "request":  {
-                                                      "method":  "GET",
-                                                      "header":  [
-                                                                     {
-                                                                         "key":  "Authorization",
-                                                                         "value":  "Bearer {{jwt_token}}"
-                                                                     }
-                                                                 ],
-                                                      "url":  {
-                                                                  "raw":  "{{base_url}}/auditorias/historicas",
-                                                                  "host":  [
-                                                                               "{{base_url}}"
-                                                                           ],
-                                                                  "path":  [
-                                                                               "auditorias",
-                                                                               "historicas"
-                                                                           ]
-                                                              }
-                                                  }
-                                  },
-                                  {
-                                      "name":  "3. Listado con Filtros",
-                                      "request":  {
-                                                      "method":  "POST",
-                                                      "header":  [
-                                                                     {
-                                                                         "key":  "Content-Type",
-                                                                         "value":  "application/json"
-                                                                     },
-                                                                     {
-                                                                         "key":  "Authorization",
-                                                                         "value":  "Bearer {{jwt_token}}"
-                                                                     }
-                                                                 ],
-                                                      "body":  {
-                                                                   "mode":  "raw",
-                                                                   "raw":  "{\n    \"dni\": \"12345678\",\n    \"fechaDesde\": \"2024-01-01\",\n    \"fechaHasta\": \"2024-12-31\"\n}"
-                                                               },
-                                                      "url":  {
-                                                                  "raw":  "{{base_url}}/auditorias/listado",
-                                                                  "host":  [
-                                                                               "{{base_url}}"
-                                                                           ],
-                                                                  "path":  [
-                                                                               "auditorias",
-                                                                               "listado"
-                                                                           ]
-                                                              }
-                                                  }
-                                  },
-                                  {
-                                      "name":  "4. Historial de Paciente",
-                                      "request":  {
-                                                      "method":  "POST",
-                                                      "header":  [
-                                                                     {
-                                                                         "key":  "Content-Type",
-                                                                         "value":  "application/json"
-                                                                     },
-                                                                     {
-                                                                         "key":  "Authorization",
-                                                                         "value":  "Bearer {{jwt_token}}"
-                                                                     }
-                                                                 ],
-                                                      "body":  {
-                                                                   "mode":  "raw",
-                                                                   "raw":  "{\n    \"dni\": \"12345678\",\n    \"fechaDesde\": \"2024-01-01\",\n    \"fechaHasta\": \"2024-12-31\"\n}"
-                                                               },
-                                                      "url":  {
-                                                                  "raw":  "{{base_url}}/auditorias/paciente",
-                                                                  "host":  [
-                                                                               "{{base_url}}"
-                                                                           ],
-                                                                  "path":  [
-                                                                               "auditorias",
-                                                                               "paciente"
-                                                                           ]
-                                                              }
-                                                  }
-                                  },
-                                  {
-                                      "name":  "5. Generar Excel por Mes",
-                                      "request":  {
-                                                      "method":  "POST",
-                                                      "header":  [
-                                                                     {
-                                                                         "key":  "Content-Type",
-                                                                         "value":  "application/json"
-                                                                     },
-                                                                     {
-                                                                         "key":  "Authorization",
-                                                                         "value":  "Bearer {{jwt_token}}"
-                                                                     }
-                                                                 ],
-                                                      "body":  {
-                                                                   "mode":  "raw",
-                                                                   "raw":  "{\n    \"fecha\": \"2024-12\"\n}"
-                                                               },
-                                                      "url":  {
-                                                                  "raw":  "{{base_url}}/auditorias/excel",
-                                                                  "host":  [
-                                                                               "{{base_url}}"
-                                                                           ],
-                                                                  "path":  [
-                                                                               "auditorias",
-                                                                               "excel"
-                                                                           ]
-                                                              }
-                                                  }
-                                  },
-                                  {
-                                      "name":  "6. Auditorías Médicas (Solo Rol 9)",
-                                      "request":  {
-                                                      "method":  "GET",
-                                                      "url":  {
-                                                                  "host":  [
-                                                                               "{{base_url}}"
-                                                                           ],
-                                                                  "raw":  "{{base_url}}/auditorias/medicas",
-                                                                  "path":  [
-                                                                               "auditorias",
-                                                                               "medicas"
-                                                                           ]
-                                                              },
-                                                      "header":  [
-                                                                     {
-                                                                         "key":  "Authorization",
-                                                                         "value":  "Bearer {{jwt_token}}"
-                                                                     }
-                                                                 ]
-                                                  }
-                                  }
-                              ]
-                 },
-                 {
-                     "name":  "AUDITORIAS - PROCESAMIENTO",
-                     "item":  [
-                                  {
-                                      "name":  "1. Obtener Auditoría para Procesar",
-                                      "request":  {
-                                                      "method":  "GET",
-                                                      "header":  [
-                                                                     {
-                                                                         "key":  "Authorization",
-                                                                         "value":  "Bearer {{jwt_token}}"
-                                                                     }
-                                                                 ],
-                                                      "url":  {
-                                                                  "raw":  "{{base_url}}/auditorias/{{auditoria_id}}",
-                                                                  "host":  [
-                                                                               "{{base_url}}"
-                                                                           ],
-                                                                  "path":  [
-                                                                               "auditorias",
-                                                                               "{{auditoria_id}}"
-                                                                           ]
-                                                              }
-                                                  }
-                                  },
-                                  {
-                                      "name":  "2. Procesar Auditoría (Aprobar/Denegar)",
-                                      "request":  {
-                                                      "method":  "POST",
-                                                      "header":  [
-                                                                     {
-                                                                         "key":  "Content-Type",
-                                                                         "value":  "application/json"
-                                                                     },
-                                                                     {
-                                                                         "key":  "Authorization",
-                                                                         "value":  "Bearer {{jwt_token}}"
-                                                                     }
-                                                                 ],
-                                                      "body":  {
-                                                                   "mode":  "raw",
-                                                                   "raw":  "{\n    \"chequedos\": \"123-1,124-2\",\n    \"nochequeados\": \"125-1\",\n    \"cobert1\": \"70\",\n    \"cobert2\": \"50\",\n    \"cobert3\": \"100\",\n    \"cobert4\": \"50\",\n    \"cobert2_1\": \"BIAC\",\n    \"cobert2_2\": \"CE\",\n    \"cobert2_3\": \"ONC\",\n    \"cobert2_4\": \"BIAC\",\n    \"nota\": \"Auditoría procesada correctamente\",\n    \"estadoIdentidad\": 0\n}"
-                                                               },
-                                                      "url":  {
-                                                                  "raw":  "{{base_url}}/auditorias/{{auditoria_id}}/procesar",
-                                                                  "host":  [
-                                                                               "{{base_url}}"
-                                                                           ],
-                                                                  "path":  [
-                                                                               "auditorias",
-                                                                               "{{auditoria_id}}",
-                                                                               "procesar"
-                                                                           ]
-                                                              }
-                                                  }
-                                  },
-                                  {
-                                      "name":  "3. Enviar a Médico Auditor",
-                                      "request":  {
-                                                      "method":  "POST",
-                                                      "header":  [
-                                                                     {
-                                                                         "key":  "Authorization",
-                                                                         "value":  "Bearer {{jwt_token}}"
-                                                                     }
-                                                                 ],
-                                                      "url":  {
-                                                                  "raw":  "{{base_url}}/auditorias/{{auditoria_id}}/enviar-medico",
-                                                                  "host":  [
-                                                                               "{{base_url}}"
-                                                                           ],
-                                                                  "path":  [
-                                                                               "auditorias",
-                                                                               "{{auditoria_id}}",
-                                                                               "enviar-medico"
-                                                                           ]
-                                                              }
-                                                  }
-                                  },
-                                  {
-                                      "name":  "4. Revertir Auditoría",
-                                      "request":  {
-                                                      "method":  "POST",
-                                                      "header":  [
-                                                                     {
-                                                                         "key":  "Content-Type",
-                                                                         "value":  "application/json"
-                                                                     },
-                                                                     {
-                                                                         "key":  "Authorization",
-                                                                         "value":  "Bearer {{jwt_token}}"
-                                                                     }
-                                                                 ],
-                                                      "body":  {
-                                                                   "mode":  "raw",
-                                                                   "raw":  "{\n    \"accion\": \"1\",\n    \"nota\": \"Revertir por error en el procesamiento\"\n}"
-                                                               },
-                                                      "url":  {
-                                                                  "raw":  "{{base_url}}/auditorias/{{auditoria_id}}/revertir-borrar",
-                                                                  "host":  [
-                                                                               "{{base_url}}"
-                                                                           ],
-                                                                  "path":  [
-                                                                               "auditorias",
-                                                                               "{{auditoria_id}}",
-                                                                               "revertir-borrar"
-                                                                           ]
-                                                              }
-                                                  }
-                                  },
-                                  {
-                                      "name":  "5. Borrar Auditoría",
-                                      "request":  {
-                                                      "method":  "POST",
-                                                      "header":  [
-                                                                     {
-                                                                         "key":  "Content-Type",
-                                                                         "value":  "application/json"
-                                                                     },
-                                                                     {
-                                                                         "key":  "Authorization",
-                                                                         "value":  "Bearer {{jwt_token}}"
-                                                                     }
-                                                                 ],
-                                                      "body":  {
-                                                                   "mode":  "raw",
-                                                                   "raw":  "{\n    \"accion\": \"2\",\n    \"nota\": \"Auditoría duplicada - eliminar\"\n}"
-                                                               },
-                                                      "url":  {
-                                                                  "raw":  "{{base_url}}/auditorias/{{auditoria_id}}/revertir-borrar",
-                                                                  "host":  [
-                                                                               "{{base_url}}"
-                                                                           ],
-                                                                  "path":  [
-                                                                               "auditorias",
-                                                                               "{{auditoria_id}}",
-                                                                               "revertir-borrar"
-                                                                           ]
-                                                              }
-                                                  }
-                                  }
-                              ]
-                 }
-             ]
+    "info": {
+        "name": "CPCE Auditoria API - ACTUALIZADA v1.1",
+        "description": "Colección COMPLETA actualizada con correcciones de base de datos para la API de Sistema de Auditorías CPCE",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "variable": [
+        {
+            "key": "base_url",
+            "value": "http://localhost:3000/api",
+            "type": "string"
+        },
+        {
+            "key": "base_url_prod",
+            "value": "https://tu-dominio-api.com/api",
+            "type": "string"
+        },
+        {
+            "key": "jwt_token",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "auditoria_id",
+            "value": "1",
+            "type": "string"
+        }
+    ],
+    "item": [
+        {
+            "name": "🔐 AUTH",
+            "item": [
+                {
+                    "name": "1. Health Check",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/health",
+                            "host": ["{{base_url}}"],
+                            "path": ["health"]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "2. Login",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "if (pm.response.code === 200) {",
+                                    "    const responseJson = pm.response.json();",
+                                    "    if (responseJson.token) {",
+                                    "        pm.collectionVariables.set('jwt_token', responseJson.token);",
+                                    "        console.log('Token guardado:', responseJson.token.substring(0, 20) + '...');",
+                                    "        console.log('Usuario:', responseJson.user.nombre + ' ' + responseJson.user.apellido);",
+                                    "        console.log('Rol:', responseJson.user.rol);",
+                                    "    }",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"username\": \"tu_usuario\",\n    \"password\": \"tu_password\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/auth/login",
+                            "host": ["{{base_url}}"],
+                            "path": ["auth", "login"]
+                        }
+                    }
+                },
+                {
+                    "name": "3. Get Profile",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwt_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/auth/profile",
+                            "host": ["{{base_url}}"],
+                            "path": ["auth", "profile"]
+                        }
+                    }
+                },
+                {
+                    "name": "4. Verify Token",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwt_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/auth/verify",
+                            "host": ["{{base_url}}"],
+                            "path": ["auth", "verify"]
+                        }
+                    }
+                },
+                {
+                    "name": "5. Change Password",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"username\": \"tu_usuario\",\n    \"dni\": \"12345678\",\n    \"password_nuevo\": \"nueva_password123\",\n    \"password_nuevo_repetir\": \"nueva_password123\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/auth/change-password",
+                            "host": ["{{base_url}}"],
+                            "path": ["auth", "change-password"]
+                        }
+                    }
+                },
+                {
+                    "name": "6. Logout",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwt_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/auth/logout",
+                            "host": ["{{base_url}}"],
+                            "path": ["auth", "logout"]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "📊 AUDITORIAS - LISTADOS",
+            "item": [
+                {
+                    "name": "1. Auditorías Pendientes",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "if (pm.response.code === 200) {",
+                                    "    const responseJson = pm.response.json();",
+                                    "    console.log('Total auditorías pendientes:', responseJson.total);",
+                                    "    console.log('Página actual:', responseJson.page);",
+                                    "    console.log('Registros en esta página:', responseJson.data.length);",
+                                    "    if (responseJson.data.length > 0) {",
+                                    "        const primera = responseJson.data[0];",
+                                    "        pm.collectionVariables.set('auditoria_id', primera.id);",
+                                    "        console.log('ID de primera auditoría guardado:', primera.id);",
+                                    "    }",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwt_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/auditorias/pendientes?page=1&limit=10&search=",
+                            "host": ["{{base_url}}"],
+                            "path": ["auditorias", "pendientes"],
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "1",
+                                    "description": "Número de página"
+                                },
+                                {
+                                    "key": "limit",
+                                    "value": "10",
+                                    "description": "Registros por página"
+                                },
+                                {
+                                    "key": "search",
+                                    "value": "",
+                                    "description": "Búsqueda por apellido, nombre, DNI o médico"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "2. Auditorías Históricas",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "if (pm.response.code === 200) {",
+                                    "    const responseJson = pm.response.json();",
+                                    "    console.log('Total auditorías históricas:', responseJson.total);",
+                                    "    console.log('Página actual:', responseJson.page);",
+                                    "    console.log('Registros en esta página:', responseJson.data.length);",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwt_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/auditorias/historicas?page=1&limit=10&search=",
+                            "host": ["{{base_url}}"],
+                            "path": ["auditorias", "historicas"],
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                },
+                                {
+                                    "key": "limit",
+                                    "value": "10"
+                                },
+                                {
+                                    "key": "search",
+                                    "value": ""
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "3. 🩺 Auditorías Médicas (Solo Rol 9)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "if (pm.response.code === 200) {",
+                                    "    const responseJson = pm.response.json();",
+                                    "    console.log('Mensaje:', responseJson.message);",
+                                    "    console.log('Auditorías médicas encontradas:', responseJson.data.length);",
+                                    "} else if (pm.response.code === 403) {",
+                                    "    console.log('Acceso denegado - Solo para médicos auditores (rol 9)');",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwt_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/auditorias/medicas",
+                            "host": ["{{base_url}}"],
+                            "path": ["auditorias", "medicas"]
+                        }
+                    }
+                },
+                {
+                    "name": "4. Listado con Filtros",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwt_token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"dni\": \"12345678\",\n    \"fechaDesde\": \"2024-01-01\",\n    \"fechaHasta\": \"2024-12-31\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/auditorias/listado",
+                            "host": ["{{base_url}}"],
+                            "path": ["auditorias", "listado"]
+                        }
+                    }
+                },
+                {
+                    "name": "5. ✅ Historial de Paciente (CORREGIDO)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "if (pm.response.code === 200) {",
+                                    "    const responseJson = pm.response.json();",
+                                    "    console.log('Historial del paciente - Registros encontrados:', responseJson.data.length);",
+                                    "    if (responseJson.data.length > 0) {",
+                                    "        const primer = responseJson.data[0];",
+                                    "        console.log('Paciente:', primer.pac_apnom);",
+                                    "        console.log('DNI:', primer.dni);",
+                                    "        console.log('Estado auditoría:', primer.estado_auditoria);",
+                                    "    }",
+                                    "} else {",
+                                    "    console.log('Error:', pm.response.json().message);",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwt_token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"dni\": \"12345678\",\n    \"fechaDesde\": \"2024-01-01\",\n    \"fechaHasta\": \"2024-12-31\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/auditorias/paciente",
+                            "host": ["{{base_url}}"],
+                            "path": ["auditorias", "paciente"]
+                        }
+                    }
+                },
+                {
+                    "name": "6. Generar Excel por Mes",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwt_token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"fecha\": \"2024-12\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/auditorias/excel",
+                            "host": ["{{base_url}}"],
+                            "path": ["auditorias", "excel"]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "⚙️ AUDITORIAS - PROCESAMIENTO",
+            "item": [
+                {
+                    "name": "1. Obtener Auditoría para Procesar",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "if (pm.response.code === 200) {",
+                                    "    const responseJson = pm.response.json();",
+                                    "    console.log('Auditoría ID:', responseJson.data.auditoria.id);",
+                                    "    console.log('Paciente:', responseJson.data.paciente.nombre + ' ' + responseJson.data.paciente.apellido);",
+                                    "    console.log('DNI:', responseJson.data.paciente.dni);",
+                                    "    console.log('Médico:', responseJson.data.medico.nombre);",
+                                    "    console.log('Renglones:', responseJson.data.auditoria.renglones);",
+                                    "    console.log('Meses:', responseJson.data.auditoria.cantmeses);",
+                                    "    console.log('Recetas:', Object.keys(responseJson.data.recetas).length);",
+                                    "} else {",
+                                    "    console.log('Error obteniendo auditoría:', pm.response.json().message);",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwt_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/auditorias/{{auditoria_id}}?tipo=pendiente",
+                            "host": ["{{base_url}}"],
+                            "path": ["auditorias", "{{auditoria_id}}"],
+                            "query": [
+                                {
+                                    "key": "tipo",
+                                    "value": "pendiente",
+                                    "description": "Tipo de auditoría: pendiente o historica"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "2. Procesar Auditoría (Aprobar/Denegar)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "if (pm.response.code === 200) {",
+                                    "    const responseJson = pm.response.json();",
+                                    "    console.log('Auditoría procesada:', responseJson.success);",
+                                    "    console.log('Mensaje:', responseJson.message);",
+                                    "} else {",
+                                    "    console.log('Error procesando auditoría:', pm.response.json().message);",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwt_token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"chequedos\": \"123-1,124-2\",\n    \"nochequeados\": \"125-1\",\n    \"cobert1\": \"70\",\n    \"cobert2\": \"50\",\n    \"cobert3\": \"100\",\n    \"cobert4\": \"50\",\n    \"cobert2_1\": \"BIAC\",\n    \"cobert2_2\": \"CE\",\n    \"cobert2_3\": \"ONC\",\n    \"cobert2_4\": \"BIAC\",\n    \"nota\": \"Auditoría procesada correctamente\",\n    \"estadoIdentidad\": 0\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/auditorias/{{auditoria_id}}/procesar",
+                            "host": ["{{base_url}}"],
+                            "path": ["auditorias", "{{auditoria_id}}", "procesar"]
+                        }
+                    }
+                },
+                {
+                    "name": "3. Enviar a Médico Auditor",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "if (pm.response.code === 200) {",
+                                    "    const responseJson = pm.response.json();",
+                                    "    console.log('Enviado a médico auditor:', responseJson.success);",
+                                    "    console.log('Mensaje:', responseJson.message);",
+                                    "} else {",
+                                    "    console.log('Error enviando a médico:', pm.response.json().message);",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwt_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/auditorias/{{auditoria_id}}/enviar-medico",
+                            "host": ["{{base_url}}"],
+                            "path": ["auditorias", "{{auditoria_id}}", "enviar-medico"]
+                        }
+                    }
+                },
+                {
+                    "name": "4. Revertir Auditoría",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "if (pm.response.code === 200) {",
+                                    "    const responseJson = pm.response.json();",
+                                    "    console.log('Auditoría revertida:', responseJson.success);",
+                                    "    console.log('Mensaje:', responseJson.message);",
+                                    "} else {",
+                                    "    console.log('Error revirtiendo auditoría:', pm.response.json().message);",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwt_token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"accion\": \"1\",\n    \"nota\": \"Revertir por error en el procesamiento\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/auditorias/{{auditoria_id}}/revertir-borrar",
+                            "host": ["{{base_url}}"],
+                            "path": ["auditorias", "{{auditoria_id}}", "revertir-borrar"]
+                        }
+                    }
+                },
+                {
+                    "name": "5. Borrar Auditoría",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "if (pm.response.code === 200) {",
+                                    "    const responseJson = pm.response.json();",
+                                    "    console.log('Auditoría borrada:', responseJson.success);",
+                                    "    console.log('Mensaje:', responseJson.message);",
+                                    "} else {",
+                                    "    console.log('Error borrando auditoría:', pm.response.json().message);",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwt_token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"accion\": \"2\",\n    \"nota\": \"Auditoría duplicada - eliminar\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/auditorias/{{auditoria_id}}/revertir-borrar",
+                            "host": ["{{base_url}}"],
+                            "path": ["auditorias", "{{auditoria_id}}", "revertir-borrar"]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "🧪 PRUEBAS ESPECÍFICAS",
+            "item": [
+                {
+                    "name": "Test 1: Búsqueda en Pendientes",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('Status code is 200', function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "pm.test('Response has data array', function () {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    pm.expect(jsonData).to.have.property('data');",
+                                    "    pm.expect(jsonData.data).to.be.an('array');",
+                                    "});",
+                                    "",
+                                    "pm.test('Response has pagination info', function () {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    pm.expect(jsonData).to.have.property('total');",
+                                    "    pm.expect(jsonData).to.have.property('page');",
+                                    "    pm.expect(jsonData).to.have.property('limit');",
+                                    "    pm.expect(jsonData).to.have.property('totalPages');",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwt_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/auditorias/pendientes?search=García&page=1&limit=5",
+                            "host": ["{{base_url}}"],
+                            "path": ["auditorias", "pendientes"],
+                            "query": [
+                                {
+                                    "key": "search",
+                                    "value": "García"
+                                },
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                },
+                                {
+                                    "key": "limit",
+                                    "value": "5"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Test 2: Historial Paciente con DNI Específico",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('Status code is 200 or 400', function () {",
+                                    "    pm.expect(pm.response.code).to.be.oneOf([200, 400]);",
+                                    "});",
+                                    "",
+                                    "if (pm.response.code === 200) {",
+                                    "    pm.test('Response has corrected field names', function () {",
+                                    "        var jsonData = pm.response.json();",
+                                    "        if (jsonData.data && jsonData.data.length > 0) {",
+                                    "            var firstRecord = jsonData.data[0];",
+                                    "            pm.expect(firstRecord).to.have.property('estado_auditoria');",
+                                    "            pm.expect(firstRecord).to.not.have.property('estado');",
+                                    "            pm.expect(firstRecord).to.not.have.property('observacion');",
+                                    "            console.log('✅ Campos corregidos correctamente');",
+                                    "        }",
+                                    "    });",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwt_token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"dni\": \"12345678\",\n    \"fechaDesde\": \"2024-01-01\",\n    \"fechaHasta\": \"2024-12-31\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/auditorias/paciente",
+                            "host": ["{{base_url}}"],
+                            "path": ["auditorias", "paciente"]
+                        }
+                    }
+                },
+                {
+                    "name": "Test 3: Validar Estructura de Auditoría Completa",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "if (pm.response.code === 200) {",
+                                    "    pm.test('Response has correct structure', function () {",
+                                    "        var jsonData = pm.response.json();",
+                                    "        pm.expect(jsonData).to.have.property('success');",
+                                    "        pm.expect(jsonData).to.have.property('data');",
+                                    "        pm.expect(jsonData.data).to.have.property('auditoria');",
+                                    "        pm.expect(jsonData.data).to.have.property('paciente');",
+                                    "        pm.expect(jsonData.data).to.have.property('medico');",
+                                    "        pm.expect(jsonData.data).to.have.property('recetas');",
+                                    "        console.log('✅ Estructura de respuesta correcta');",
+                                    "    });",
+                                    "} else if (pm.response.code === 404) {",
+                                    "    console.log('⚠️ Auditoría no encontrada (normal si el ID no existe)');",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwt_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/auditorias/{{auditoria_id}}",
+                            "host": ["{{base_url}}"],
+                            "path": ["auditorias", "{{auditoria_id}}"]
+                        }
+                    }
+                },
+                {
+                    "name": "Test 4: Acceso Denegado para Auditorías Médicas",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "pm.test('Response should be 200 (if role 9) or 403 (if not role 9)', function () {",
+                                    "    pm.expect(pm.response.code).to.be.oneOf([200, 403]);",
+                                    "});",
+                                    "",
+                                    "if (pm.response.code === 403) {",
+                                    "    pm.test('Correct error message for non-medical auditor', function () {",
+                                    "        var jsonData = pm.response.json();",
+                                    "        pm.expect(jsonData.message).to.include('médicos auditores');",
+                                    "        console.log('✅ Control de roles funcionando correctamente');",
+                                    "    });",
+                                    "} else if (pm.response.code === 200) {",
+                                    "    console.log('✅ Usuario con rol de médico auditor - acceso permitido');",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwt_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/auditorias/medicas",
+                            "host": ["{{base_url}}"],
+                            "path": ["auditorias", "medicas"]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "🔍 DEBUGGING Y LOGS",
+            "item": [
+                {
+                    "name": "Debug: Ver Variables de Colección",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "console.log('=== VARIABLES DE COLECCIÓN ===');",
+                                    "console.log('Base URL:', pm.collectionVariables.get('base_url'));",
+                                    "console.log('JWT Token (primeros 50 chars):', pm.collectionVariables.get('jwt_token')?.substring(0, 50) + '...');",
+                                    "console.log('Auditoria ID:', pm.collectionVariables.get('auditoria_id'));",
+                                    "console.log('=== FIN VARIABLES ===');"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/health",
+                            "host": ["{{base_url}}"],
+                            "path": ["health"]
+                        }
+                    }
+                },
+                {
+                    "name": "Debug: Test de Conexión Completo",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "console.log('=== TEST DE CONEXIÓN COMPLETO ===');",
+                                    "console.log('Response Code:', pm.response.code);",
+                                    "console.log('Response Time:', pm.response.responseTime + 'ms');",
+                                    "console.log('Response Size:', pm.response.responseSize + ' bytes');",
+                                    "",
+                                    "pm.test('Health check is working', function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "    var jsonData = pm.response.json();",
+                                    "    pm.expect(jsonData.status).to.eql('OK');",
+                                    "});",
+                                    "",
+                                    "if (pm.response.code === 200) {",
+                                    "    console.log('✅ Servidor API funcionando correctamente');",
+                                    "    var responseData = pm.response.json();",
+                                    "    console.log('Timestamp servidor:', responseData.timestamp);",
+                                    "} else {",
+                                    "    console.log('❌ Problema con el servidor API');",
+                                    "}",
+                                    "console.log('=== FIN TEST CONEXIÓN ===');"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/health",
+                            "host": ["{{base_url}}"],
+                            "path": ["health"]
+                        }
+                    }
+                }
+            ]
+        }
+    ],
+    "event": [
+        {
+            "listen": "prerequest",
+            "script": {
+                "type": "text/javascript",
+                "exec": [
+                    "// Script que se ejecuta antes de cada request",
+                    "console.log('🚀 Ejecutando request a:', pm.request.url.toString());"
+                ]
+            }
+        },
+        {
+            "listen": "test",
+            "script": {
+                "type": "text/javascript",
+                "exec": [
+                    "// Script que se ejecuta después de cada response",
+                    "console.log('📊 Response status:', pm.response.code, pm.response.status);"
+                ]
+            }
+        }
+    ]
 }

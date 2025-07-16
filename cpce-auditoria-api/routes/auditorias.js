@@ -12,6 +12,9 @@ router.get('/pendientes', auditoriasController.getPendientes);
 // GET /api/auditorias/historicas - Obtener auditorías históricas
 router.get('/historicas', auditoriasController.getHistoricas);
 
+// GET /api/auditorias/medicas - Obtener auditorías médicas (solo rol 9)
+router.get('/medicas', auditoriasController.getAuditoriasMedicas);
+
 // POST /api/auditorias/listado - Obtener listado con filtros
 router.post('/listado', auditoriasController.getListado);
 
