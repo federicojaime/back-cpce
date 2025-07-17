@@ -6,17 +6,17 @@ export const auditoriasService = {
   getPendientes: async (params = {}) => {
     try {
       const queryParams = new URLSearchParams();
-      
+
       // Agregar parámetros de filtro si existen
       if (params.search) queryParams.append('search', params.search);
       if (params.page) queryParams.append('page', params.page);
       if (params.limit) queryParams.append('limit', params.limit);
       if (params.sortBy) queryParams.append('sortBy', params.sortBy);
       if (params.sortOrder) queryParams.append('sortOrder', params.sortOrder);
-      
+
       const url = `/auditorias/pendientes${queryParams.toString() ? `?${queryParams}` : ''}`;
       const response = await api.get(url);
-      
+
       return {
         success: true,
         data: response.data.data || [],
@@ -38,16 +38,16 @@ export const auditoriasService = {
   getHistoricas: async (params = {}) => {
     try {
       const queryParams = new URLSearchParams();
-      
+
       if (params.search) queryParams.append('search', params.search);
       if (params.page) queryParams.append('page', params.page);
       if (params.limit) queryParams.append('limit', params.limit);
       if (params.fechaDesde) queryParams.append('fechaDesde', params.fechaDesde);
       if (params.fechaHasta) queryParams.append('fechaHasta', params.fechaHasta);
-      
+
       const url = `/auditorias/historicas${queryParams.toString() ? `?${queryParams}` : ''}`;
       const response = await api.get(url);
-      
+
       return {
         success: true,
         data: response.data.data || [],
@@ -69,7 +69,7 @@ export const auditoriasService = {
   getAuditoria: async (id) => {
     try {
       const response = await api.get(`/auditorias/${id}`);
-      
+
       return {
         success: true,
         data: response.data.auditoria || {},
@@ -89,7 +89,7 @@ export const auditoriasService = {
   procesarAuditoria: async (id, datos) => {
     try {
       const response = await api.post(`/auditorias/${id}/procesar`, datos);
-      
+
       return {
         success: true,
         data: response.data,
@@ -109,7 +109,7 @@ export const auditoriasService = {
   enviarMedicoAuditor: async (id) => {
     try {
       const response = await api.post(`/auditorias/${id}/enviar-medico`);
-      
+
       return {
         success: true,
         data: response.data,
@@ -132,7 +132,7 @@ export const auditoriasService = {
         accion: '1', // 1 = revertir
         nota
       });
-      
+
       return {
         success: true,
         data: response.data,
@@ -152,7 +152,7 @@ export const auditoriasService = {
   buscarAuditorias: async (filtros) => {
     try {
       const response = await api.post('/auditorias/listado', filtros);
-      
+
       return {
         success: true,
         data: response.data.data || [],
@@ -171,23 +171,44 @@ export const auditoriasService = {
   },
 
   // Obtener historial de paciente
-  getHistorialPaciente: async (filtros) => {
+  getHistorialPaciente: async (filters) => {
     try {
-      const response = await api.post('/auditorias/paciente', filtros);
+      // Construir query params correctamente
+      const params = new URLSearchParams();
       
-      return {
-        success: true,
-        data: response.data.historial || [],
-        paciente: response.data.paciente || {},
-        message: response.data.message || 'Historial obtenido correctamente'
-      };
+      // Parámetros obligatorios
+      params.append('dni', filters.dni);
+      params.append('page', filters.page || 1);
+      params.append('limit', filters.limit || 10);
+      
+      // Parámetros opcionales
+      if (filters.fechaDesde) params.append('fechaDesde', filters.fechaDesde);
+      if (filters.fechaHasta) params.append('fechaHasta', filters.fechaHasta);
+      if (filters.search) params.append('search', filters.search);
+      
+      console.log('Query params:', params.toString());
+      
+      const response = await api.get(`/auditorias/historial-paciente?${params.toString()}`);
+      return response.data;
     } catch (error) {
       console.error('Error en getHistorialPaciente:', error);
+      
+      // Manejar errores de respuesta
+      if (error.response) {
+        return {
+          success: false,
+          message: error.response.data?.message || 'Error al obtener historial',
+          data: [],
+          total: 0
+        };
+      }
+      
+      // Error de red u otro
       return {
         success: false,
+        message: 'Error de conexión al servidor',
         data: [],
-        paciente: {},
-        message: error.response?.data?.message || 'Error al obtener historial del paciente'
+        total: 0
       };
     }
   },
@@ -198,7 +219,7 @@ export const auditoriasService = {
       const response = await api.post('/auditorias/excel', { fecha }, {
         responseType: 'blob' // Para manejar archivos
       });
-      
+
       // Crear URL para descargar el archivo
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
@@ -207,7 +228,7 @@ export const auditoriasService = {
       document.body.appendChild(link);
       link.click();
       link.remove();
-      
+
       return {
         success: true,
         message: 'Archivo Excel descargado correctamente'
@@ -225,14 +246,14 @@ export const auditoriasService = {
   getAuditoriasMedicas: async (params = {}) => {
     try {
       const queryParams = new URLSearchParams();
-      
+
       if (params.search) queryParams.append('search', params.search);
       if (params.page) queryParams.append('page', params.page);
       if (params.limit) queryParams.append('limit', params.limit);
-      
+
       const url = `/auditorias/medicas${queryParams.toString() ? `?${queryParams}` : ''}`;
       const response = await api.get(url);
-      
+
       return {
         success: true,
         data: response.data.data || [],
@@ -250,3 +271,19 @@ export const auditoriasService = {
     }
   }
 };
+
+// Función auxiliar para calcular edad
+function calculateAge(fechaNacimiento) {
+  if (!fechaNacimiento) return null;
+
+  const birthDate = new Date(fechaNacimiento);
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+
+  return age;
+}

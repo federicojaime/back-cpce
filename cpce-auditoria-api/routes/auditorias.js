@@ -1,10 +1,13 @@
 ﻿const express = require('express');
 const router = express.Router();
 const auditoriasController = require('../controllers/auditoriasController');
-const authMiddleware = require('../middleware/auth');
+const auth = require('../middleware/auth');
 
 // Todas las rutas de auditorías requieren autenticación
-router.use(authMiddleware);
+router.use(auth); // CAMBIAR authMiddleware por auth
+
+// Ruta para historial de paciente (GET) - MOVER ARRIBA DE LAS RUTAS CON PARÁMETROS
+router.get('/historial-paciente', auditoriasController.getHistorialPaciente);
 
 // GET /api/auditorias/pendientes - Obtener auditorías pendientes
 router.get('/pendientes', auditoriasController.getPendientes);
@@ -19,10 +22,13 @@ router.get('/medicas', auditoriasController.getAuditoriasMedicas);
 router.post('/listado', auditoriasController.getListado);
 
 // POST /api/auditorias/paciente - Obtener historial de un paciente
-router.post('/paciente', auditoriasController.getHistorialPaciente);
+router.post('/paciente', auditoriasController.getHistorialPacientePOST); // Cambiar nombre para diferenciar
 
 // POST /api/auditorias/excel - Generar reporte Excel por mes
 router.post('/excel', auditoriasController.generarExcel);
+
+// POST /api/auditorias/excel-historial - Exportar historial de paciente
+router.post('/excel-historial', auditoriasController.exportarHistorialPaciente);
 
 // GET /api/auditorias/:id - Obtener datos completos para auditar
 router.get('/:id', auditoriasController.getAuditoriaCompleta);

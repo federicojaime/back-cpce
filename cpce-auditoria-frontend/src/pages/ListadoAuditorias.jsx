@@ -1,14 +1,16 @@
-// src/pages/ListadoAuditorias.jsx
-import React, { useState } from 'react';
+// src/pages/ListadoAuditorias.jsx - MEJORADO SEGÚN SISTEMA LEGACY
+import React, { useState, useCallback, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { auditoriasService } from '../services/auditoriasService';
 import Loading from '../components/common/Loading';
 import ErrorMessage from '../components/common/ErrorMessage';
 import Breadcrumb from '../components/common/Breadcrumb';
-import DataTable from '../components/common/DataTable';
-import { 
+import Pagination from '../components/common/Pagination';
+import {
   MagnifyingGlassIcon,
   DocumentArrowDownIcon,
-  FunnelIcon
+  FunnelIcon,
+  EyeIcon
 } from '@heroicons/react/24/outline';
 
 const ListadoAuditorias = () => {
@@ -16,14 +18,20 @@ const ListadoAuditorias = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [hasSearched, setHasSearched] = useState(false);
-  
-  // Estados para filtros
+
+  // Estados para filtros y paginación
   const [filters, setFilters] = useState({
     dni: '',
     fechaDesde: '',
     fechaHasta: '',
-    apellido: '',
-    nombre: ''
+    page: 1,
+    limit: 10
+  });
+
+  const [pagination, setPagination] = useState({
+    total: 0,
+    totalPages: 0,
+    currentPage: 1
   });
 
   // Breadcrumb configuration
@@ -32,77 +40,34 @@ const ListadoAuditorias = () => {
     { name: 'Listado', href: '/listado', current: true }
   ];
 
-  // Configuración de columnas
-  const columns = [
-    {
-      key: 'apellido',
-      label: 'Apellido',
-      sortable: true,
-      className: 'font-medium text-gray-900'
-    },
-    {
-      key: 'nombre',
-      label: 'Nombre',
-      sortable: true,
-      className: 'text-gray-900'
-    },
-    {
-      key: 'dni',
-      label: 'DNI',
-      sortable: true,
-      className: 'text-gray-900 font-mono'
-    },
-    {
-      key: 'fecha',
-      label: 'Fecha',
-      sortable: true,
-      className: 'text-gray-900'
-    },
-    {
-      key: 'medico',
-      label: 'Médico',
-      sortable: true,
-      className: 'text-gray-900 max-w-xs truncate'
-    },
-    {
-      key: 'auditado',
-      label: 'Estado',
-      sortable: true,
-      className: 'text-center',
-      render: (value) => (
-        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-          value === '1' || value === 1
-            ? 'bg-green-100 text-green-800'
-            : 'bg-yellow-100 text-yellow-800'
-        }`}>
-          {value === '1' || value === 1 ? 'Auditado' : 'Pendiente'}
-        </span>
-      )
-    },
-    {
-      key: 'auditadoX',
-      label: 'Auditado Por',
-      className: 'text-gray-900 max-w-xs truncate',
-      render: (value) => value || '-'
-    }
-  ];
-
-  // Realizar búsqueda
-  const handleSearch = async () => {
-    if (!filters.dni && !filters.apellido && !filters.nombre && !filters.fechaDesde) {
-      setError('Debe completar al menos un campo de búsqueda');
+  // Cargar auditorías con paginación
+  const loadAuditorias = useCallback(async (showLoading = true) => {
+    if (!filters.dni && !filters.fechaDesde) {
+      setError('Debe completar al menos el DNI o fecha desde');
       return;
     }
 
     try {
-      setLoading(true);
+      if (showLoading) setLoading(true);
       setError('');
-      setHasSearched(true);
-      
+
+      console.log('Enviando filtros:', filters);
+
       const result = await auditoriasService.buscarAuditorias(filters);
-      
+
+      console.log('Resultado del servicio:', result);
+
       if (result.success) {
         setAuditorias(result.data);
+        setPagination({
+          total: result.total || 0,
+          totalPages: result.totalPages || Math.ceil((result.total || 0) / filters.limit),
+          currentPage: filters.page
+        });
+
+        if (result.data.length === 0) {
+          setError('No se encontraron auditorías con los criterios especificados');
+        }
       } else {
         setError(result.message);
         setAuditorias([]);
@@ -114,6 +79,29 @@ const ListadoAuditorias = () => {
     } finally {
       setLoading(false);
     }
+  }, [filters]);
+
+  // Efecto para cargar datos cuando cambian los filtros (excepto la primera vez)
+  useEffect(() => {
+    if (hasSearched) {
+      const timeoutId = setTimeout(() => {
+        loadAuditorias(false);
+      }, 300);
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [loadAuditorias, hasSearched]);
+
+  // Realizar búsqueda inicial
+  const handleSearch = async () => {
+    if (!filters.dni && !filters.fechaDesde) {
+      setError('Debe completar al menos el DNI o fecha desde');
+      return;
+    }
+
+    setHasSearched(true);
+    setFilters(prev => ({ ...prev, page: 1 }));
+    await loadAuditorias(true);
   };
 
   // Limpiar formulario
@@ -122,12 +110,27 @@ const ListadoAuditorias = () => {
       dni: '',
       fechaDesde: '',
       fechaHasta: '',
-      apellido: '',
-      nombre: ''
+      page: 1,
+      limit: 10
     });
     setAuditorias([]);
     setError('');
     setHasSearched(false);
+    setPagination({
+      total: 0,
+      totalPages: 0,
+      currentPage: 1
+    });
+  };
+
+  // Manejar cambio de página
+  const handlePageChange = (newPage) => {
+    setFilters(prev => ({ ...prev, page: newPage }));
+  };
+
+  // Manejar cambio de tamaño de página
+  const handlePageSizeChange = (newSize) => {
+    setFilters(prev => ({ ...prev, limit: newSize, page: 1 }));
   };
 
   // Exportar resultados
@@ -135,7 +138,7 @@ const ListadoAuditorias = () => {
     try {
       const fecha = new Date().toISOString().slice(0, 7);
       const result = await auditoriasService.generarExcel(fecha);
-      
+
       if (!result.success) {
         setError(result.message);
       }
@@ -154,76 +157,20 @@ const ListadoAuditorias = () => {
       <div className="bg-white rounded-lg shadow-sm border border-gray-200">
         <div className="px-6 py-4 border-b border-gray-200">
           <h1 className="text-xl font-semibold text-gray-900">
-            Listado General de Auditorías
+            AUDITORÍA
           </h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Búsqueda avanzada con múltiples criterios de filtrado
-          </p>
         </div>
 
-        {/* Formulario de búsqueda */}
-        <div className="px-6 py-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {/* DNI */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                DNI del Paciente
-              </label>
-              <input
-                type="text"
-                value={filters.dni}
-                onChange={(e) => setFilters(prev => ({ ...prev, dni: e.target.value }))}
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                placeholder="Ej: 12345678"
-                maxLength="8"
-              />
-            </div>
+        {/* Filtros de búsqueda - Estilo legacy */}
+        <div className="px-6 py-4 bg-gray-50">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">
+            Listado de Pendientes e Históricos
+          </h3>
 
-            {/* Apellido */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Apellido
-              </label>
-              <input
-                type="text"
-                value={filters.apellido}
-                onChange={(e) => setFilters(prev => ({ ...prev, apellido: e.target.value }))}
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                placeholder="Apellido del paciente"
-              />
-            </div>
-
-            {/* Nombre */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Nombre
-              </label>
-              <input
-                type="text"
-                value={filters.nombre}
-                onChange={(e) => setFilters(prev => ({ ...prev, nombre: e.target.value }))}
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                placeholder="Nombre del paciente"
-              />
-            </div>
-
-            {/* Fecha desde */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Fecha desde
-              </label>
-              <input
-                type="date"
-                value={filters.fechaDesde}
-                onChange={(e) => setFilters(prev => ({ ...prev, fechaDesde: e.target.value }))}
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-              />
-            </div>
-
-            {/* Fecha hasta */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Fecha hasta
+                Fecha Hasta:
               </label>
               <input
                 type="date"
@@ -233,22 +180,18 @@ const ListadoAuditorias = () => {
               />
             </div>
 
-            {/* Botones */}
-            <div className="flex items-end space-x-2">
+            <div className="flex space-x-2">
               <button
                 onClick={handleSearch}
                 disabled={loading}
-                className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
               >
-                <MagnifyingGlassIcon className="h-4 w-4 mr-2" />
-                {loading ? 'Buscando...' : 'Buscar'}
+                Filtrar
               </button>
-              
               <button
                 onClick={handleClear}
-                className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                className="px-4 py-2 bg-gray-500 text-white rounded-md text-sm font-medium hover:bg-gray-600"
               >
-                <FunnelIcon className="h-4 w-4 mr-2" />
                 Limpiar
               </button>
             </div>
@@ -258,8 +201,8 @@ const ListadoAuditorias = () => {
 
       {/* Error */}
       {error && (
-        <ErrorMessage 
-          message={error} 
+        <ErrorMessage
+          message={error}
           onRetry={handleSearch}
           showRetry={hasSearched}
         />
@@ -272,38 +215,137 @@ const ListadoAuditorias = () => {
         </div>
       )}
 
-      {/* Resultados */}
+      {/* Tabla de resultados - Estilo legacy */}
       {!loading && hasSearched && (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
           {/* Header de resultados */}
           <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
             <div>
-              <h3 className="text-lg font-medium text-gray-900">
-                Resultados de la búsqueda
-              </h3>
-              <p className="text-sm text-gray-500">
-                {auditorias.length} auditorías encontradas
+              <p className="text-sm text-gray-600">
+                {auditorias.length} registros encontrados
               </p>
             </div>
-            
+
             {auditorias.length > 0 && (
               <button
                 onClick={handleExport}
-                className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
               >
                 <DocumentArrowDownIcon className="h-4 w-4 mr-2" />
-                Exportar Excel
+                Excel
               </button>
             )}
           </div>
 
-          {/* Tabla */}
-          <DataTable
-            columns={columns}
-            data={auditorias}
-            loading={false}
-            emptyMessage="No se encontraron auditorías con los criterios especificados"
-          />
+          {/* Tabla responsive */}
+          <div className="overflow-x-auto">
+            <table className="min-w-full">
+              <thead className="bg-gray-50">
+                <tr className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left border-r border-gray-200">Apellido</th>
+                  <th className="px-4 py-3 text-left border-r border-gray-200">Nombre</th>
+                  <th className="px-4 py-3 text-left border-r border-gray-200">DNI</th>
+                  <th className="px-4 py-3 text-left border-r border-gray-200">Fecha</th>
+                  <th className="px-4 py-3 text-left border-r border-gray-200">Médico</th>
+                  <th className="px-3 py-3 text-center border-r border-gray-200">Cant</th>
+                  <th className="px-3 py-3 text-center border-r border-gray-200">Meses</th>
+                  <th className="px-4 py-3 text-left border-r border-gray-200">Auditor</th>
+                  <th className="px-4 py-3 text-left border-r border-gray-200">FecAudi</th>
+                  <th className="px-3 py-3 text-center">Acciones</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {auditorias.length === 0 ? (
+                  <tr>
+                    <td colSpan="10" className="px-6 py-12 text-center text-gray-500">
+                      No se encontraron auditorías con los criterios especificados
+                    </td>
+                  </tr>
+                ) : (
+                  auditorias.map((auditoria, index) => (
+                    <tr key={auditoria.id || index} className="hover:bg-gray-50 text-sm">
+                      <td className="px-4 py-3 border-r border-gray-200">
+                        <span className="text-blue-600 font-medium">
+                          {auditoria.apellido}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 border-r border-gray-200">
+                        <span className="text-blue-600">
+                          {auditoria.nombre}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 border-r border-gray-200 font-mono">
+                        {auditoria.dni}
+                      </td>
+                      <td className="px-4 py-3 border-r border-gray-200">
+                        {auditoria.fecha}
+                      </td>
+                      <td className="px-4 py-3 border-r border-gray-200 max-w-xs truncate">
+                        <span title={auditoria.medico}>
+                          {auditoria.medico}
+                        </span>
+                      </td>
+                      <td className="px-3 py-3 text-center border-r border-gray-200">
+                        <span className="inline-flex items-center justify-center w-6 h-6 bg-blue-100 text-blue-800 rounded text-xs font-medium">
+                          {auditoria.renglones || auditoria.cant || '1'}
+                        </span>
+                      </td>
+                      <td className="px-3 py-3 text-center border-r border-gray-200">
+                        {auditoria.meses || auditoria.cantmeses || '6'}
+                      </td>
+                      <td className="px-4 py-3 border-r border-gray-200">
+                        <span className="text-blue-600">
+                          {auditoria.auditor || auditoria.auditadoX || 'José Garrido'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 border-r border-gray-200">
+                        {auditoria.fechaAuditoria || auditoria.fecha_auditoria || auditoria.fecha}
+                      </td>
+                      <td className="px-3 py-3 text-center">
+                        {auditoria.auditado || auditoria.estado_auditoria ? (
+                          // Auditoría histórica
+                          <Link
+                            to={`/auditoria/${auditoria.id}/historica`}
+                            className="inline-flex items-center px-2 py-1 border border-gray-300 rounded-md text-xs font-medium text-gray-700 bg-white hover:bg-gray-50"
+                            title="Ver auditoría histórica"
+                          >
+                            <EyeIcon className="h-3 w-3 mr-1" />
+                            Ver
+                          </Link>
+                        ) : (
+                          // Auditoría pendiente
+                          <Link
+                            to={`/auditoria/${auditoria.id}`}
+                            className="inline-flex items-center px-2 py-1 border border-blue-300 rounded-md text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100"
+                            title="Procesar auditoría"
+                          >
+                            <EyeIcon className="h-3 w-3 mr-1" />
+                            Auditar
+                          </Link>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Paginación */}
+          {auditorias.length > 0 && (
+            <div className="border-t border-gray-200">
+              <Pagination
+                current={pagination.currentPage}
+                total={pagination.total}
+                pageSize={filters.limit}
+                totalPages={pagination.totalPages}
+                onPageChange={handlePageChange}
+                onPageSizeChange={handlePageSizeChange}
+                showSizeChanger={true}
+                showTotal={true}
+              />
+            </div>
+          )}
         </div>
       )}
 
@@ -316,17 +358,18 @@ const ListadoAuditorias = () => {
             </div>
             <div className="ml-3">
               <h3 className="text-sm font-medium text-blue-800">
-                Búsqueda avanzada de auditorías
+                Búsqueda de auditorías pendientes e históricas
               </h3>
               <div className="mt-2 text-sm text-blue-700">
                 <p>
-                  Complete al menos uno de los campos de búsqueda para obtener resultados. 
-                  Puede combinar múltiples criterios para refinar su búsqueda.
+                  Complete al menos el DNI o fecha desde para obtener resultados.
+                  Este listado muestra tanto auditorías pendientes como procesadas.
                 </p>
                 <ul className="mt-2 list-disc list-inside">
-                  <li>Use el DNI para búsquedas exactas</li>
-                  <li>Los campos de texto buscan coincidencias parciales</li>
+                  <li>Use el DNI para búsquedas exactas de un paciente</li>
                   <li>Las fechas permiten filtrar por rango temporal</li>
+                  <li>Los resultados incluyen auditorías pendientes e históricas</li>
+                  <li>Use "Auditar" para procesar pendientes o "Ver" para históricos</li>
                 </ul>
               </div>
             </div>

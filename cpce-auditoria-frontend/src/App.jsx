@@ -56,104 +56,102 @@ function AppContent() {
   return (
     <Routes>
       {/* Rutas públicas */}
-      <Route 
-        path="/login" 
+      <Route
+        path="/login"
         element={
           <PublicRoute>
             <Login />
           </PublicRoute>
-        } 
+        }
       />
 
       {/* Rutas protegidas */}
-      <Route 
-        path="/" 
+      <Route
+        path="/"
         element={
           <ProtectedRoute>
             <Dashboard />
           </ProtectedRoute>
-        } 
+        }
       />
-      
-      <Route 
-        path="/pendientes" 
+
+      <Route
+        path="/pendientes"
         element={
           <ProtectedRoute>
             <AuditoriasPendientes />
           </ProtectedRoute>
-        } 
+        }
       />
-      
-      <Route 
-        path="/historicos" 
+
+      <Route
+        path="/historicos"
         element={
           <ProtectedRoute>
             <AuditoriasHistoricas />
           </ProtectedRoute>
-        } 
+        }
       />
-      
-      <Route 
-        path="/listado" 
+
+      <Route
+        path="/listado"
         element={
           <ProtectedRoute>
             <ListadoAuditorias />
           </ProtectedRoute>
-        } 
+        }
       />
-      
-      <Route 
-        path="/historial-paciente" 
+
+      <Route
+        path="/historial-paciente"
         element={
           <ProtectedRoute>
             <HistorialPaciente />
           </ProtectedRoute>
-        } 
+        }
       />
-      
-      <Route 
-        path="/descargar-excel" 
+
+      <Route
+        path="/descargar-excel"
         element={
           <ProtectedRoute>
             <DescargarExcel />
           </ProtectedRoute>
-        } 
+        }
       />
-      
-      <Route 
-        path="/vademecum" 
+
+      <Route
+        path="/vademecum"
         element={
           <ProtectedRoute>
             <Vademecum />
           </ProtectedRoute>
-        } 
+        }
       />
-      
+
       {/* Ruta para procesar auditoría específica */}
-      <Route 
-        path="/auditoria/:id" 
+      <Route
+        path="/auditoria/:id"
         element={
           <ProtectedRoute>
             <ProcesarAuditoria />
           </ProtectedRoute>
-        } 
+        }
       />
 
       {/* Nueva ruta para ver auditoría histórica */}
       <Route
         path="/auditoria/:id/historica"
         element={
-            <ProtectedRoute>
-                <Layout>
-                    <VerAuditoriaHistorica />
-                </Layout>
-            </ProtectedRoute>
+          <ProtectedRoute>
+            <VerAuditoriaHistorica />
+          </ProtectedRoute>
         }
       />
 
       {/* Rutas de administración/configuración */}
-      <Route 
-        path="/perfil" 
+      <Route
+        path="/perfil"
         element={
           <ProtectedRoute>
             <div className="p-6">
@@ -161,11 +159,11 @@ function AppContent() {
               <p className="mt-2 text-gray-600">Funcionalidad en desarrollo</p>
             </div>
           </ProtectedRoute>
-        } 
+        }
       />
-      
-      <Route 
-        path="/configuracion" 
+
+      <Route
+        path="/configuracion"
         element={
           <ProtectedRoute>
             <div className="p-6">
@@ -173,12 +171,12 @@ function AppContent() {
               <p className="mt-2 text-gray-600">Funcionalidad en desarrollo</p>
             </div>
           </ProtectedRoute>
-        } 
+        }
       />
 
       {/* Páginas de ayuda */}
-      <Route 
-        path="/ayuda" 
+      <Route
+        path="/ayuda"
         element={
           <ProtectedRoute>
             <div className="p-6">
@@ -186,11 +184,11 @@ function AppContent() {
               <p className="mt-2 text-gray-600">Documentación y soporte técnico</p>
             </div>
           </ProtectedRoute>
-        } 
+        }
       />
-      
-      <Route 
-        path="/manual" 
+
+      <Route
+        path="/manual"
         element={
           <ProtectedRoute>
             <div className="p-6">
@@ -198,12 +196,12 @@ function AppContent() {
               <p className="mt-2 text-gray-600">Guía completa del sistema</p>
             </div>
           </ProtectedRoute>
-        } 
+        }
       />
 
       {/* Ruta de fallback - 404 */}
-      <Route 
-        path="/404" 
+      <Route
+        path="/404"
         element={
           <ProtectedRoute>
             <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -228,7 +226,7 @@ function AppContent() {
               </div>
             </div>
           </ProtectedRoute>
-        } 
+        }
       />
 
       {/* Redirigir cualquier ruta no encontrada a 404 */}
@@ -245,10 +243,10 @@ function App() {
         <div className="App">
           {/* Aquí podrías agregar componentes globales como notificaciones, modales, etc. */}
           <AppContent />
-          
+
           {/* Componente global para notificaciones toast (si lo implementas) */}
           {/* <ToastContainer /> */}
-          
+
           {/* Modal global para confirmaciones (si lo implementas) */}
           {/* <ConfirmModal /> */}
         </div>
