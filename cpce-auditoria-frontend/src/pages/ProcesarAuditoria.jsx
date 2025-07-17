@@ -54,62 +54,90 @@ const ProcesarAuditoria = () => {
 
     // Cargar datos de la auditoría
     useEffect(() => {
-        const loadAuditoria = async () => {
-            try {
-                setLoading(true);
-                setError('');
-
-                const result = await auditoriasService.getAuditoria(id);
-
-                if (result.success) {
-                    setAuditoria(result.data);
-
-                    // Inicializar estados
-                    const medicamentos = result.data.medicamentos || [];
-                    const mesesPorMedicamento = {};
-                    const coberturasPorDefecto = {};
-                    const tiposPorDefecto = {};
-
-                    medicamentos.forEach((med, index) => {
-                        const key = `${med.idreceta1}-${med.renglon}`;
-
-                        // Inicializar meses para cada medicamento (de 1 a 6 meses)
-                        const meses = {};
-                        for (let i = 1; i <= 6; i++) {
-                            meses[i] = false;
-                        }
-                        mesesPorMedicamento[key] = meses;
-
-                        coberturasPorDefecto[index + 1] = '50';
-                        tiposPorDefecto[index + 1] = 'BIAC';
-                    });
-
-                    setMesesSeleccionados(mesesPorMedicamento);
-                    setCoberturas(coberturasPorDefecto);
-                    setTiposCobertura(tiposPorDefecto);
-                } else {
-                    setError(result.message);
-                }
-            } catch (error) {
-                console.error('Error cargando auditoría:', error);
-                setError('Error inesperado al cargar la auditoría');
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        if (id) {
-            loadAuditoria();
-        }
+        loadAuditoria();
     }, [id]);
 
+    const loadAuditoria = async () => {
+        try {
+            setLoading(true);
+            setError('');
+            
+            console.log('Cargando auditoría ID:', id);
+            
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/auditorias/${id}`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('cpce_token')}`
+                }
+            });
+
+            console.log('Response status:', response.status);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const result = await response.json();
+            
+            console.log('=== RESPUESTA COMPLETA DEL SERVIDOR ===');
+            console.log('result:', result);
+            console.log('result.success:', result.success);
+            console.log('result.data:', result.data); // CAMBIO: data en lugar de auditoria
+            
+            if (result.success && result.data) { // CAMBIO: data en lugar de auditoria
+                console.log('Datos del paciente:', result.data.paciente);
+                console.log('Datos del médico:', result.data.medico);
+                console.log('Datos del diagnóstico:', result.data.diagnostico);
+                console.log('Medicamentos:', result.data.medicamentos);
+                
+                setAuditoria(result.data); // CAMBIO: data en lugar de auditoria
+                
+                // Inicializar estados basados en los medicamentos
+                if (result.data.medicamentos && result.data.medicamentos.length > 0) {
+                    const mesesInit = {};
+                    const coberturasInit = {};
+                    const tiposInit = {};
+                    
+                    result.data.medicamentos.forEach((med) => {
+                        const key = `${med.idreceta}_${med.renglon}`;
+                        mesesInit[key] = {
+                            mes1: false,
+                            mes2: false,
+                            mes3: false,
+                            mes4: false,
+                            mes5: false,
+                            mes6: false
+                        };
+                        coberturasInit[med.renglon] = med.cobertura || '50';
+                        tiposInit[med.renglon] = med.tipo || 'CE';
+                    });
+                    
+                    setMesesSeleccionados(mesesInit);
+                    setCoberturas(coberturasInit);
+                    setTiposCobertura(tiposInit);
+                }
+                
+                setError('');
+            } else {
+                console.error('Respuesta inválida:', result);
+                setError(result.message || 'No se pudo cargar la auditoría');
+                setAuditoria(null);
+            }
+        } catch (error) {
+            console.error('Error cargando auditoría:', error);
+            setError(`Error al cargar los datos: ${error.message}`);
+            setAuditoria(null);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     // Manejar selección de meses
-    const handleMesChange = (medicamentoKey, mes) => {
+    const handleMesChange = (key, mes) => {
         setMesesSeleccionados(prev => ({
             ...prev,
-            [medicamentoKey]: {
-                ...prev[medicamentoKey],
-                [mes]: !prev[medicamentoKey][mes]
+            [key]: {
+                ...prev[key],
+                [mes]: !prev[key][mes]
             }
         }));
     };
@@ -128,19 +156,39 @@ const ProcesarAuditoria = () => {
         });
     };
 
-    // Manejar cambio de cobertura
-    const handleCoberturaChange = (renglon, valor) => {
-        setCoberturas(prev => ({
+    const handleTodosChange = (key) => {
+        const meses = mesesSeleccionados[key] || {};
+        const todosSeleccionados = Object.values(meses).every(mes => mes);
+        
+        setMesesSeleccionados(prev => ({
             ...prev,
-            [renglon]: valor
+            [key]: {
+                mes1: !todosSeleccionados,
+                mes2: !todosSeleccionados,
+                mes3: !todosSeleccionados,
+                mes4: !todosSeleccionados,
+                mes5: !todosSeleccionados,
+                mes6: !todosSeleccionados
+            }
         }));
     };
 
+    // Manejar cambio de cobertura
+    const handleCoberturaChange = (renglon, value) => {
+        const numValue = parseInt(value) || 0;
+        if (numValue >= 0 && numValue <= 100) {
+            setCoberturas(prev => ({
+                ...prev,
+                [renglon]: numValue
+            }));
+        }
+    };
+
     // Manejar cambio de tipo de cobertura
-    const handleTipoCoberturaChange = (renglon, valor) => {
+    const handleTipoCoberturaChange = (renglon, value) => {
         setTiposCobertura(prev => ({
             ...prev,
-            [renglon]: valor
+            [renglon]: value
         }));
     };
 
@@ -303,23 +351,23 @@ const ProcesarAuditoria = () => {
                                 <div className="grid grid-cols-2 gap-x-2 text-sm">
                                     <div>
                                         <span className="text-gray-600">Apellido:</span>
-                                        <div className="font-semibold">{auditoria?.paciente?.apellido}</div>
+                                        <div className="font-semibold">{auditoria?.paciente?.apellido || 'Sin datos'}</div>
                                     </div>
                                     <div>
                                         <span className="text-gray-600">Nombre:</span>
-                                        <div className="font-semibold">{auditoria?.paciente?.nombre}</div>
+                                        <div className="font-semibold">{auditoria?.paciente?.nombre || 'Sin datos'}</div>
                                     </div>
                                     <div>
                                         <span className="text-gray-600">DNI:</span>
-                                        <div className="font-semibold">{auditoria?.paciente?.dni}</div>
+                                        <div className="font-semibold">{auditoria?.paciente?.dni || 'Sin datos'}</div>
                                     </div>
                                     <div>
                                         <span className="text-gray-600">Sexo:</span>
-                                        <div className="font-semibold">{auditoria?.paciente?.sexo}</div>
+                                        <div className="font-semibold">{auditoria?.paciente?.sexo || 'Sin datos'}</div>
                                     </div>
                                     <div>
                                         <span className="text-gray-600">Edad:</span>
-                                        <div className="font-semibold">{auditoria?.paciente?.edad} años</div>
+                                        <div className="font-semibold">{auditoria?.paciente?.edad ? `${auditoria.paciente.edad} años` : 'Sin datos'}</div>
                                     </div>
                                     <div>
                                         <span className="text-gray-600">Talla:</span>
@@ -402,7 +450,7 @@ const ProcesarAuditoria = () => {
                         <div className="mb-6">
                             <div className="bg-gray-50 border border-gray-200 rounded-t-lg px-4 py-3">
                                 <h3 className="text-lg font-semibold text-gray-800 flex items-center">
-                                    📋 Medicamentos para Auditoría
+                                    💊 Medicamentos para Auditoría
                                 </h3>
                             </div>
 
@@ -430,7 +478,7 @@ const ProcesarAuditoria = () => {
                                                     COBERTURA
                                                 </th>
                                                 <th className="px-3 py-3 text-center text-xs font-semibold text-gray-700 uppercase border-r border-gray-200">
-                                                    COBERTURA2
+                                                    TIPO
                                                 </th>
                                                 <th className="px-2 py-3 text-center text-xs font-semibold text-gray-700 uppercase border-r border-gray-200">
                                                     MES1
@@ -457,101 +505,96 @@ const ProcesarAuditoria = () => {
                                         </thead>
                                         <tbody>
                                             {auditoria.medicamentos.map((medicamento, index) => {
-                                                const key = `${medicamento.idreceta1}-${medicamento.renglon}`;
-
+                                                const key = `${medicamento.idreceta}_${medicamento.renglon}`;
+                                                const meses = mesesSeleccionados[key] || {
+                                                    mes1: false,
+                                                    mes2: false,
+                                                    mes3: false,
+                                                    mes4: false,
+                                                    mes5: false,
+                                                    mes6: false
+                                                };
+                                                const todosSeleccionados = Object.values(meses).every(mes => mes);
+                                                
                                                 return (
-                                                    <tr key={index} className="bg-white border-b border-gray-200 hover:bg-gray-50">
+                                                    <tr key={key} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                                                        {/* Nombre Comercial */}
                                                         <td className="px-4 py-3 text-sm border-r border-gray-200">
-                                                            <div className="font-medium text-gray-900">{medicamento.nombre}</div>
+                                                            <div className="font-medium text-gray-900">
+                                                                {medicamento.nombrecomercial}
+                                                            </div>
                                                         </td>
-                                                        <td className="px-4 py-3 text-sm text-gray-700 border-r border-gray-200">
-                                                            {medicamento.monodroga}
+                                                        
+                                                        {/* Monodroga */}
+                                                        <td className="px-4 py-3 text-sm border-r border-gray-200">
+                                                            {medicamento.monodroga || '-'}
                                                         </td>
-                                                        <td className="px-4 py-3 text-sm text-gray-700 border-r border-gray-200">
-                                                            {medicamento.presentacion}
+                                                        
+                                                        {/* Presentación */}
+                                                        <td className="px-4 py-3 text-sm border-r border-gray-200">
+                                                            {medicamento.presentacion || '-'}
                                                         </td>
-                                                        <td className="px-3 py-3 text-sm text-center font-medium border-r border-gray-200">
-                                                            {medicamento.cantprescripta}
-                                                        </td>
+                                                        
+                                                        {/* Cantidad */}
                                                         <td className="px-3 py-3 text-sm text-center border-r border-gray-200">
-                                                            {medicamento.posologia}
+                                                            {medicamento.cantidad}
                                                         </td>
-
+                                                        
+                                                        {/* Dosis */}
+                                                        <td className="px-3 py-3 text-sm text-center border-r border-gray-200">
+                                                            {medicamento.dosis || '-'}
+                                                        </td>
+                                                        
                                                         {/* Cobertura */}
                                                         <td className="px-3 py-3 text-center border-r border-gray-200">
-                                                            <select
-                                                                value={coberturas[medicamento.renglon] || '50'}
+                                                            <input
+                                                                type="number"
+                                                                min="0"
+                                                                max="100"
+                                                                value={coberturas[medicamento.renglon] || medicamento.cobertura || '50'}
                                                                 onChange={(e) => handleCoberturaChange(medicamento.renglon, e.target.value)}
-                                                                disabled={auditoria.botonesDeshabilitados}
-                                                                className="w-16 px-1 py-1 text-xs border border-gray-300 rounded bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                                            >
-                                                                {opcionesCobertura.map(opcion => (
-                                                                    <option key={opcion.value} value={opcion.value}>
-                                                                        {opcion.label}
-                                                                    </option>
-                                                                ))}
-                                                            </select>
+                                                                disabled={auditoria?.botonesDeshabilitados}
+                                                                className="w-16 px-2 py-1 text-sm text-center border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100"
+                                                            />
+                                                            <span className="text-xs text-gray-500">%</span>
                                                         </td>
-
-                                                        {/* Tipo de Cobertura */}
+                                                        
+                                                        {/* Tipo Cobertura */}
                                                         <td className="px-3 py-3 text-center border-r border-gray-200">
                                                             <select
-                                                                value={tiposCobertura[medicamento.renglon] || 'BIAC'}
+                                                                value={tiposCobertura[medicamento.renglon] || medicamento.tipo || 'CE'}
                                                                 onChange={(e) => handleTipoCoberturaChange(medicamento.renglon, e.target.value)}
-                                                                disabled={auditoria.botonesDeshabilitados}
-                                                                className="w-16 px-1 py-1 text-xs border border-gray-300 rounded bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                                disabled={auditoria?.botonesDeshabilitados}
+                                                                className="px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100"
                                                             >
-                                                                {tiposCoberturaMedicamento.map(tipo => (
-                                                                    <option key={tipo.value} value={tipo.value}>
-                                                                        {tipo.label}
-                                                                    </option>
-                                                                ))}
+                                                                <option value="CE">CE</option>
+                                                                <option value="CA">CA</option>
+                                                                <option value="PE">PE</option>
                                                             </select>
                                                         </td>
-
-                                                        {/* Meses - checkboxes con indicadores visuales */}
-                                                        {[1, 2, 3, 4, 5, 6].map(mes => {
-                                                            const isSelected = mesesSeleccionados[key]?.[mes] || false;
-                                                            return (
-                                                                <td key={mes} className={`px-2 py-3 text-center border-r border-gray-200 ${isSelected ? 'bg-green-100' : 'bg-red-50'
-                                                                    }`}>
-                                                                    <div className="flex flex-col items-center">
-                                                                        <input
-                                                                            type="checkbox"
-                                                                            checked={isSelected}
-                                                                            onChange={() => handleMesChange(key, mes)}
-                                                                            disabled={auditoria.botonesDeshabilitados}
-                                                                            className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                                                                        />
-                                                                        <span className={`text-xs font-bold mt-1 ${isSelected ? 'text-green-600' : 'text-red-500'
-                                                                            }`}>
-                                                                            {isSelected ? '✓' : '✗'}
-                                                                        </span>
-                                                                    </div>
-                                                                </td>
-                                                            );
-                                                        })}
-
-                                                        {/* Botones Todos/Ninguno */}
+                                                        
+                                                        {/* Checkboxes para cada mes */}
+                                                        {[1, 2, 3, 4, 5, 6].map((mes) => (
+                                                            <td key={`mes${mes}`} className="px-2 py-3 text-center border-r border-gray-200">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={meses[`mes${mes}`]}
+                                                                    onChange={() => handleMesChange(key, `mes${mes}`)}
+                                                                    disabled={auditoria?.botonesDeshabilitados}
+                                                                    className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 disabled:opacity-50"
+                                                                />
+                                                            </td>
+                                                        ))}
+                                                        
+                                                        {/* Checkbox Todos */}
                                                         <td className="px-3 py-3 text-center">
-                                                            <div className="flex flex-col space-y-1">
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => handleSelectAllMeses(key, true)}
-                                                                    disabled={auditoria.botonesDeshabilitados}
-                                                                    className="px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50 transition-colors"
-                                                                >
-                                                                    Todos
-                                                                </button>
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => handleSelectAllMeses(key, false)}
-                                                                    disabled={auditoria.botonesDeshabilitados}
-                                                                    className="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50 transition-colors"
-                                                                >
-                                                                    Ninguno
-                                                                </button>
-                                                            </div>
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={todosSeleccionados}
+                                                                onChange={() => handleTodosChange(key)}
+                                                                disabled={auditoria?.botonesDeshabilitados}
+                                                                className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 disabled:opacity-50"
+                                                            />
                                                         </td>
                                                     </tr>
                                                 );
@@ -559,6 +602,17 @@ const ProcesarAuditoria = () => {
                                         </tbody>
                                     </table>
                                 </div>
+                            </div>
+                            
+                            {/* Resumen de selección */}
+                            <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                                <p className="text-sm text-blue-800">
+                                    <strong>Medicamentos seleccionados:</strong> {
+                                        Object.keys(mesesSeleccionados).filter(key => 
+                                            Object.values(mesesSeleccionados[key]).some(mes => mes)
+                                        ).length
+                                    } de {auditoria.medicamentos.length}
+                                </p>
                             </div>
                         </div>
                     )}

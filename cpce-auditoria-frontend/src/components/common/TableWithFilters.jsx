@@ -3,6 +3,7 @@ import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import Breadcrumb from './Breadcrumb';
 import Loading from './Loading';
 import ErrorMessage from './ErrorMessage';
+import DataTable from './DataTable';
 
 const TableWithFilters = ({
     // Props de configuración
@@ -38,6 +39,15 @@ const TableWithFilters = ({
     renderRow,
     additionalInfo
 }) => {
+    const paginationProps = {
+        currentPage: pagination.currentPage,
+        totalPages: pagination.totalPages,
+        pageSize,
+        total: pagination.total,
+        onPageChange,
+        onPageSizeChange
+    };
+
     return (
         <div className="p-4 lg:p-6 space-y-6">
             {/* Breadcrumb */}
@@ -92,62 +102,17 @@ const TableWithFilters = ({
             {!loading || data.length > 0 ? (
                 <div className="bg-white shadow overflow-hidden sm:rounded-md">
                     <div className="border-t border-gray-200">
-                        <table className="min-w-full divide-y divide-gray-200">
-                            <thead className="bg-gray-50">
-                                <tr>
-                                    {columns.map((column, index) => (
-                                        <th
-                                            key={column.key}
-                                            className={`px-6 py-3 text-${column.align || 'left'} text-xs font-medium text-gray-500 uppercase tracking-wider ${
-                                                index < columns.length - 1 ? 'border-r border-gray-200' : ''
-                                            }`}
-                                        >
-                                            {column.label}
-                                        </th>
-                                    ))}
-                                </tr>
-                            </thead>
-                            <tbody className="bg-white divide-y divide-gray-200">
-                                {refreshing && !loading ? (
-                                    <tr>
-                                        <td colSpan={columns.length} className="px-6 py-12 text-center">
-                                            <div className="flex flex-col items-center">
-                                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                                                <span className="mt-2 text-sm text-gray-500">Actualizando...</span>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ) : data.length === 0 ? (
-                                    <tr>
-                                        <td colSpan={columns.length} className="px-6 py-12 text-center">
-                                            <div className="flex flex-col items-center">
-                                                <svg className="h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                                </svg>
-                                                <span className="mt-2 text-sm text-gray-500">
-                                                    {searchValue ? emptySearchMessage : emptyMessage}
-                                                </span>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    data.map((item, index) => renderRow ? renderRow(item, index) : (
-                                        <tr key={item.id || index} className="hover:bg-gray-50">
-                                            {columns.map((column, colIndex) => (
-                                                <td
-                                                    key={column.key}
-                                                    className={`px-6 py-4 ${column.className || ''} ${
-                                                        colIndex < columns.length - 1 ? 'border-r border-gray-200' : ''
-                                                    }`}
-                                                >
-                                                    {column.render ? column.render(item) : item[column.key]}
-                                                </td>
-                                            ))}
-                                        </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
+                        {/* Tabla con scroll horizontal mejorado */}
+                        <div className="mt-6 relative">
+                            <DataTable
+                                columns={columns}
+                                data={data}
+                                loading={loading}
+                                emptyMessage={emptyMessage}
+                                emptySearchMessage={emptySearchMessage}
+                                searchValue={searchValue}
+                            />
+                        </div>
                     </div>
                 </div>
             ) : null}
@@ -159,9 +124,16 @@ const TableWithFilters = ({
                         {/* Información de registros y selector de página */}
                         <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-4">
                             <div className="text-sm text-gray-700">
-                                Mostrando <span className="font-medium">{pagination.total === 0 ? 0 : (pagination.currentPage - 1) * pageSize + 1}</span> al{' '}
-                                <span className="font-medium">{Math.min(pagination.currentPage * pageSize, pagination.total)}</span> de{' '}
-                                <span className="font-medium">{pagination.total}</span> registros
+                                Mostrando{' '}
+                                <span className="font-medium">
+                                    {pagination.total === 0 ? 0 : Math.max(1, (pagination.currentPage - 1) * pageSize + 1)}
+                                </span>{' '}
+                                al{' '}
+                                <span className="font-medium">
+                                    {Math.min(pagination.currentPage * pageSize, pagination.total)}
+                                </span>{' '}
+                                de{' '}
+                                <span className="font-medium">{pagination.total || 0}</span> registros
                             </div>
 
                             <div className="flex items-center space-x-2">

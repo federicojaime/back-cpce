@@ -30,3 +30,32 @@
     @apply animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600;
   }
 }
+
+/* Mejoras para scroll horizontal en tablas */
+.overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Estilos para la barra de scroll */
+.overflow-x-auto::-webkit-scrollbar {
+    height: 8px;
+}
+
+.overflow-x-auto::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.overflow-x-auto::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+.overflow-x-auto::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+/* Para que la tabla mantenga su ancho mínimo */
+table {
+    table-layout: auto;
+}

@@ -6,7 +6,7 @@ import TableWithFilters from '../components/common/TableWithFilters';
 import {
     EyeIcon,
     DocumentArrowDownIcon,
-    DocumentTextIcon
+    DocumentTextIcon,ArrowPathIcon 
 } from '@heroicons/react/24/outline';
 
 const AuditoriasPendientes = () => {
@@ -71,16 +71,32 @@ const AuditoriasPendientes = () => {
             label: 'Acciones',
             align: 'center',
             className: 'whitespace-nowrap text-center',
-            render: (row) => (
-                <Link
-                    to={`/auditoria/${row.id}`}
-                    className="inline-flex items-center px-3 py-1 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
-                    title="Ver auditoría"
-                >
-                    <EyeIcon className="h-4 w-4 mr-1" />
-                    Ver
-                </Link>
-            )
+            render: (row) => {
+                // Verificar primero si row existe
+                if (!row) {
+                    console.error('Row is undefined');
+                    return <span className="text-gray-400">-</span>;
+                }
+                
+                console.log('Row data:', row);
+                const auditoriaId = row.id || row.idauditoria || row.idAuditoria;
+                
+                if (!auditoriaId) {
+                    console.error('No se encontró ID para la auditoría:', row);
+                    return <span className="text-gray-400">-</span>;
+                }
+                
+                return (
+                    <Link
+                        to={`/auditoria/${auditoriaId}`}
+                        className="inline-flex items-center px-3 py-1 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+                        title="Ver auditoría"
+                    >
+                        <EyeIcon className="h-4 w-4 mr-1" />
+                        Ver
+                    </Link>
+                );
+            }
         }
     ];
 
@@ -88,8 +104,7 @@ const AuditoriasPendientes = () => {
     const loadAuditorias = useCallback(async (showLoading = true) => {
         try {
             if (showLoading) setLoading(true);
-            setError('');
-
+            
             const queryParams = new URLSearchParams();
             if (searchTerm) queryParams.append('search', searchTerm);
             queryParams.append('page', filters.page);
@@ -105,14 +120,30 @@ const AuditoriasPendientes = () => {
             const result = await response.json();
 
             if (result.success) {
-                setAuditorias(result.data || []);
-                setPagination({
+                console.log('Auditorías recibidas:', result.data);
+                console.log('Tipo de datos:', Array.isArray(result.data) ? 'Array' : typeof result.data);
+                
+                // Asegurarnos de que data sea un array válido
+                const dataArray = Array.isArray(result.data) ? result.data : [];
+                
+                // Filtrar cualquier elemento null o undefined
+                const cleanData = dataArray.filter(item => item != null);
+                
+                console.log('Datos limpios:', cleanData);
+                
+                setAuditorias(cleanData);
+                
+                // Manejar paginación
+                const paginationData = {
                     total: result.total || 0,
-                    totalPages: result.totalPages || 0,
-                    currentPage: result.page || 1
-                });
+                    totalPages: result.totalPages || Math.ceil((result.total || 0) / filters.limit),
+                    currentPage: result.page || filters.page
+                };
+                
+                setPagination(paginationData);
+                setError('');
             } else {
-                setError(result.message || 'Error al cargar auditorías');
+                setError(result.message || 'Error al cargar las auditorías');
                 setAuditorias([]);
             }
         } catch (error) {
@@ -173,7 +204,7 @@ const AuditoriasPendientes = () => {
                 disabled={refreshing}
                 className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 transition-colors duration-200"
             >
-                <DocumentTextIcon className={`h-5 w-5 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+                <ArrowPathIcon  className={`h-5 w-5 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
                 {refreshing ? 'Actualizando...' : 'Actualizar'}
             </button>
 

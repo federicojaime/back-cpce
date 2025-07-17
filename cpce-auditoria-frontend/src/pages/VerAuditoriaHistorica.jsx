@@ -5,6 +5,7 @@ import {
     ArrowLeftIcon, 
     UserIcon, 
     DocumentTextIcon,
+    ArrowPathIcon,
     CalendarIcon,
     PrinterIcon,
     CheckCircleIcon,
@@ -136,7 +137,7 @@ const VerAuditoriaHistorica = () => {
             {/* Información de la auditoría */}
             <div className="bg-white shadow rounded-lg p-6 mb-6">
                 <h2 className="text-lg font-semibold mb-4 flex items-center">
-                    <DocumentTextIcon className="h-5 w-5 mr-2" />
+                    <ArrowPathIcon  className="h-5 w-5 mr-2" />
                     Información de la Auditoría
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -229,48 +230,52 @@ const VerAuditoriaHistorica = () => {
                     <h3 className="text-lg font-semibold mb-4">
                         Receta N° {recetaData.nroreceta}
                     </h3>
-                    <div className="overflow-x-auto">
-                        <table className="min-w-full divide-y divide-gray-200">
-                            <thead className="bg-gray-50">
-                                <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Medicamento
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Cantidad
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Estado
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Observación
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody className="bg-white divide-y divide-gray-200">
-                                {recetaData.medicamentos.map((med) => (
-                                    <tr key={med.id}>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="text-sm font-medium text-gray-900">
-                                                {med.nombrecomercial}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                            {med.cantidad}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getEstadoColor(med.estado)}`}>
-                                                {getEstadoIcon(med.estado)}
-                                                <span className="ml-1">{getEstadoTexto(med.estado)}</span>
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4 text-sm text-gray-900">
-                                            {med.observacion || '-'}
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                    <div className="overflow-x-auto -mx-6 px-6">
+                        <div className="inline-block min-w-full align-middle">
+                            <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
+                                <table className="min-w-full divide-y divide-gray-200">
+                                    <thead className="bg-gray-50">
+                                        <tr>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Medicamento
+                                            </th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Cantidad
+                                            </th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Estado
+                                            </th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                Observación
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="bg-white divide-y divide-gray-200">
+                                        {recetaData.medicamentos.map((med) => (
+                                            <tr key={med.id}>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <div className="text-sm font-medium text-gray-900">
+                                                        {med.nombrecomercial}
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                    {med.cantidad}
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getEstadoColor(med.estado)}`}>
+                                                        {getEstadoIcon(med.estado)}
+                                                        <span className="ml-1">{getEstadoTexto(med.estado)}</span>
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 text-sm text-gray-900">
+                                                    {med.observacion || '-'}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
                 </div>
             ))}
