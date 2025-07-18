@@ -48,6 +48,9 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/auditorias', require('./routes/auditorias')); // Asegúrate de que las rutas de auditorías estén registradas
 
+
+app.use('/api/proveedores', require('./routes/proveedores'));
+
 // Ruta de salud (health check)
 app.get('/api/health', (req, res) => {
     res.json({ 
