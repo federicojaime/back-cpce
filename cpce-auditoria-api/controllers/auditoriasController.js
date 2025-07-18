@@ -618,16 +618,13 @@ const auditoriasController = {
             const { id } = req.params;
             const { tipo } = req.query; // Para diferenciar entre pendiente e histórica
             
-            console.log('=== INICIO getAuditoriaCompleta ===');
-            console.log('ID recibido:', id);
-            console.log('Tipo:', tipo);
+            console.log('Obteniendo auditoría ID:', id, 'Tipo:', tipo);
 
-            // 1. Obtener datos de la auditoría
+            // Obtener datos de la auditoría
             const sqlAuditoria = `
                 SELECT 
                     a.id,
                     a.idpaciente,
-                    a.idprescriptor,
                     a.fecha_origen,
                     a.renglones,
                     a.cantmeses,
@@ -636,17 +633,14 @@ const auditoriasController = {
                     a.nota,
                     a.idreceta1,
                     a.idreceta2,
-                    a.idreceta3,
-                    a.idobrasoc
+                    a.idreceta3
                 FROM rec_auditoria a
                 WHERE a.id = ?
             `;
             
-            console.log('SQL Auditoría:', sqlAuditoria);
             const auditoriaResult = await executeQuery(sqlAuditoria, [id]);
             
             if (!auditoriaResult || auditoriaResult.length === 0) {
-                console.log('No se encontró la auditoría');
                 return res.status(404).json({
                     success: false,
                     message: 'Auditoría no encontrada'
@@ -656,7 +650,7 @@ const auditoriasController = {
             const auditoria = auditoriaResult[0];
             console.log('Auditoría encontrada:', auditoria);
 
-            // 2. Obtener datos del paciente
+            // Obtener datos del paciente
             const sqlPaciente = `
                 SELECT 
                     p.id,
@@ -674,18 +668,19 @@ const auditoriasController = {
                 WHERE p.id = ?
             `;
             
-            console.log('SQL Paciente con ID:', auditoria.idpaciente);
             const pacienteResult = await executeQuery(sqlPaciente, [auditoria.idpaciente]);
-            const paciente = pacienteResult[0] || null;
+            const paciente = pacienteResult[0] || {};
             
-            console.log('Paciente encontrado:', paciente);
+            console.log('Datos del paciente:', paciente);
 
-            // 3. Obtener datos del médico desde la primera receta
+            // Obtener datos del médico desde la primera receta
             const sqlMedico = `
                 SELECT 
                     t.matricula,
-                    t.nombre,
-                    t.apellido,
+                    CONCAT(
+                        CONCAT(UPPER(SUBSTRING(t.nombre, 1, 1)), LOWER(SUBSTRING(t.nombre, 2))), ' ',
+                        CONCAT(UPPER(SUBSTRING(t.apellido, 1, 1)), LOWER(SUBSTRING(t.apellido, 2)))
+                    ) as nombre_completo,
                     t.especialidad,
                     r.fechaemision,
                     r.diagnostico,
@@ -695,17 +690,14 @@ const auditoriasController = {
                 WHERE r.idreceta = ?
             `;
             
-            console.log('SQL Médico con receta ID:', auditoria.idreceta1);
             const medicoResult = await executeQuery(sqlMedico, [auditoria.idreceta1]);
-            const medicoData = medicoResult[0] || null;
+            const medico = medicoResult[0] || {};
             
-            console.log('Datos del médico:', medicoData);
+            console.log('Datos del médico:', medico);
 
-            // 4. Obtener medicamentos de todas las recetas
+            // Obtener medicamentos de todas las recetas
             let medicamentos = [];
             const recetas = [auditoria.idreceta1, auditoria.idreceta2, auditoria.idreceta3].filter(r => r);
-            
-            console.log('Recetas a buscar:', recetas);
             
             for (let idReceta of recetas) {
                 const sqlMedicamentos = `
@@ -729,8 +721,287 @@ const auditoriasController = {
                 `;
                 
                 const medsResult = await executeQuery(sqlMedicamentos, [idReceta]);
-                console.log(`Medicamentos encontrados para receta ${idReceta}:`, medsResult.length);
                 medicamentos = medicamentos.concat(medsResult);
             }
+            
+            console.log('Medicamentos encontrados:', medicamentos.length);
 
-       
+            // Estructurar la respuesta
+            const responseData = {
+                id: auditoria.id,
+                fecha_origen: auditoria.fecha_origen,
+                renglones: auditoria.renglones,
+                cantmeses: auditoria.cantmeses,
+                botonesDeshabilitados: auditoria.bloqueado === 1,
+                nota: auditoria.nota || '',
+                
+                paciente: {
+                    apellido: paciente.apellido || '',
+                    nombre: paciente.nombre || '',
+                    dni: paciente.dni || '',
+                    sexo: paciente.sexo || '',
+                    edad: paciente.edad || 0,
+                    telefono: paciente.telefono || '',
+                    email: paciente.email || '',
+                    talla: paciente.talla || 0,
+                    peso: paciente.peso || 0
+                },
+                
+                medico: {
+                    matricula: medico.matricula || '',
+                    nombre: medico.nombre_completo || '',
+                    especialidad: medico.especialidad || ''
+                },
+                
+                diagnostico: {
+                    diagnostico: medico.diagnostico || '',
+                    diagnostico2: medico.diagnostico2 || '',
+                    fechaemision: medico.fechaemision || ''
+                },
+                
+                medicamentos: medicamentos.map(med => ({
+                    idreceta: med.idreceta,
+                    renglon: med.renglon,
+                    idmedicamento: med.idmedicamento,
+                    nombrecomercial: med.nombrecomercial || `Medicamento ID: ${med.idmedicamento}`,
+                    monodroga: med.monodroga || '',
+                    presentacion: med.presentacion || '',
+                    cantidad: med.cantidad || 0,
+                    dosis: med.dosis || '',
+                    cobertura: med.cobertura || 50,
+                    tipo: med.tipo || 'CE',
+                    observacion: med.observacion || '',
+                    estado_auditoria: med.estado_auditoria
+                }))
+            };
+            
+            console.log('Respuesta final:', responseData);
+
+            res.json({
+                success: true,
+                auditoria: responseData
+            });
+
+        } catch (error) {
+            console.error('Error obteniendo auditoría completa:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Error al obtener datos de la auditoría',
+                error: error.message
+            });
+        }
+    },
+
+    // PROCESAR AUDITORÍA - Aprobar/denegar medicamentos
+    procesarAuditoria: async (req, res) => {
+        try {
+            const { id } = req.params;
+            const { medicamentos } = req.body;
+
+            // Implementar lógica para procesar auditoría
+            res.json({
+                success: true,
+                message: 'Función procesarAuditoria pendiente de implementar'
+            });
+
+        } catch (error) {
+            console.error('Error procesando auditoría:', error);
+            res.status(500).json({
+                error: true,
+                message: 'Error interno del servidor'
+            });
+        }
+    },
+
+    // ENVIAR A MÉDICO AUDITOR
+    enviarMedicoAuditor: async (req, res) => {
+        try {
+            const { id } = req.params;
+
+            // Implementar lógica para enviar a médico auditor
+            res.json({
+                success: true,
+                message: 'Función enviarMedicoAuditor pendiente de implementar'
+            });
+
+        } catch (error) {
+            console.error('Error enviando a médico auditor:', error);
+            res.status(500).json({
+                error: true,
+                message: 'Error interno del servidor'
+            });
+        }
+    },
+
+    // REVERTIR O BORRAR AUDITORÍA
+    revertirBorrarAuditoria: async (req, res) => {
+        try {
+            const { id } = req.params;
+            const { accion } = req.body;
+
+            // Implementar lógica para revertir o borrar
+            res.json({
+                success: true,
+                message: 'Función revertirBorrarAuditoria pendiente de implementar'
+            });
+
+        } catch (error) {
+            console.error('Error en revertir/borrar auditoría:', error);
+            res.status(500).json({
+                error: true,
+                message: 'Error interno del servidor'
+            });
+        }
+    },
+
+    // EXPORTAR HISTORIAL A EXCEL
+    exportarHistorialPaciente: async (req, res) => {
+        try {
+            const { dni, fechaDesde, fechaHasta } = req.body;
+            
+            if (!dni) {
+                return res.status(400).json({ 
+                    success: false, 
+                    message: 'DNI es requerido' 
+                });
+            }
+
+            // Consulta para obtener todos los datos sin paginación
+            let query = `
+                SELECT 
+                    a.id as idauditoria,
+                    DATE_FORMAT(a.fecha_origen, '%d/%m/%Y') as fecha_auditoria,
+                    CONCAT(
+                        CONCAT(UPPER(SUBSTRING(au.nombre, 1, 1)), LOWER(SUBSTRING(au.nombre, 2))), ' ',
+                        CONCAT(UPPER(SUBSTRING(au.apellido, 1, 1)), LOWER(SUBSTRING(au.apellido, 2)))
+                    ) as auditor,
+                    a.auditado as estado_auditoria,
+                    CONCAT(
+                        CONCAT(UPPER(SUBSTRING(c.nombre, 1, 1)), LOWER(SUBSTRING(c.nombre, 2))), ' ',
+                        CONCAT(UPPER(SUBSTRING(c.apellido, 1, 1)), LOWER(SUBSTRING(c.apellido, 2))), ' MP-', c.matricula
+                    ) as medico,
+                    'Medicamento' as nombre_comercial,
+                    'Monodroga' as monodroga,
+                    'Presentación' as presentacion,
+                    pm.cantprescripta,
+                    '-' as posologia,
+                    '-' as cobertura,
+                    pm.estado_auditoria as estado_medicamento
+                FROM rec_auditoria a
+                INNER JOIN rec_paciente p ON a.idpaciente = p.id
+                INNER JOIN rec_prescrmedicamento pm ON (a.idreceta1 = pm.idreceta OR a.idreceta2 = pm.idreceta OR a.idreceta3 = pm.idreceta)
+                INNER JOIN tmp_person c ON a.idprescriptor = c.matricula
+                LEFT JOIN user_au au ON a.auditadopor = au.id
+                WHERE p.dni = ?
+                AND a.auditado IS NOT NULL
+            `;
+            
+            const params = [dni];
+            
+            if (fechaDesde) {
+                query += ' AND DATE(a.fecha_origen) >= ?';
+                params.push(fechaDesde);
+            }
+            
+            if (fechaHasta) {
+                query += ' AND DATE(a.fecha_origen) <= ?';
+                params.push(fechaHasta);
+            }
+            
+            query += ' ORDER BY a.fecha_origen DESC, pm.idrecetamedic DESC';
+            
+            const medicamentos = await executeQuery(query, params);
+            
+            // Obtener datos del paciente
+            const [pacienteData] = await executeQuery(
+                'SELECT * FROM rec_paciente WHERE dni = ? LIMIT 1',
+                [dni]
+            );
+            
+            // Crear Excel con los datos
+            const workbook = new ExcelJS.Workbook();
+            const worksheet = workbook.addWorksheet('Historial Paciente');
+            
+            // Información del paciente
+            const paciente = pacienteData;
+            worksheet.addRow(['HISTORIAL DE PACIENTE']);
+            worksheet.addRow(['']);
+            worksheet.addRow(['DNI:', paciente?.dni || dni]);
+            worksheet.addRow(['Paciente:', paciente ? `${paciente.apellido} ${paciente.nombre}` : 'N/A']);
+            worksheet.addRow(['Edad:', paciente ? `${calculateAge(paciente.fecnac)} años` : 'N/A']);
+            worksheet.addRow(['']);
+            
+            // Encabezados de la tabla
+            const headers = [
+                'Fecha',
+                'Auditor',
+                'Médico',
+                'Medicamento',
+                'Monodroga',
+                'Presentación',
+                'Cantidad',
+                'Posología',
+                'Cobertura',
+                'Estado'
+            ];
+            
+            worksheet.addRow(headers);
+            
+            // Agregar datos
+            medicamentos.forEach(med => {
+                worksheet.addRow([
+                    med.fecha_auditoria,
+                    med.auditor,
+                    med.medico,
+                    med.nombre_comercial,
+                    med.monodroga,
+                    med.presentacion,
+                    med.cantprescripta,
+                    med.posologia,
+                    med.cobertura,
+                    med.estado_medicamento
+                ]);
+            });
+            
+            // Estilizar encabezados
+            worksheet.getRow(7).font = { bold: true };
+            worksheet.getRow(7).fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FFE0E0E0' }
+            };
+            
+            // Ajustar anchos de columna
+            worksheet.columns = [
+                { width: 12 }, { width: 20 }, { width: 30 },
+                { width: 30 }, { width: 25 }, { width: 30 },
+                { width: 10 }, { width: 15 }, { width: 10 },
+                { width: 15 }
+            ];
+            
+            // Generar archivo
+            res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+            res.setHeader('Content-Disposition', `attachment; filename=historial_paciente_${dni}.xlsx`);
+            
+            await workbook.xlsx.write(res);
+            res.end();
+            
+        } catch (error) {
+            console.error('Error exportando historial:', error);
+            res.status(500).json({ 
+                success: false, 
+                message: 'Error al generar el archivo Excel' 
+            });
+        }
+    },
+
+    // Compatibilidad con POST
+    getHistorialPacientePOST: async (req, res) => {
+        // Convertir body a query params y llamar a getHistorialPaciente
+        req.query = { ...req.query, ...req.body };
+        return auditoriasController.getHistorialPaciente(req, res);
+    }
+};
+
+// Exportar el controlador completo
+module.exports = auditoriasController;
