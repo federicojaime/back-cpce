@@ -47,8 +47,6 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Rutas
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/auditorias', require('./routes/auditorias')); // Asegúrate de que las rutas de auditorías estén registradas
-
-
 app.use('/api/proveedores', require('./routes/proveedores'));
 
 // Ruta de salud (health check)
@@ -58,6 +56,17 @@ app.get('/api/health', (req, res) => {
         message: 'API funcionando correctamente',
         timestamp: new Date().toISOString()
     });
+});
+
+// Agrega esta ruta temporal después de las otras rutas
+app.get('/api/debug/tables', async (req, res) => {
+    try {
+        const pool = require('./config/database');
+        const [tables] = await pool.query('SHOW TABLES');
+        res.json({ tables });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 });
 
 // Manejo de rutas no encontradas

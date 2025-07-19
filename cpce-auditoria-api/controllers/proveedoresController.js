@@ -1,685 +1,735 @@
 // controllers/proveedoresController.js
-const { executeQuery } = require('../config/database');
+const pool = require('../config/database');
 
-const proveedoresController = {
+// Obtener todos los proveedores con paginación y filtros
+const getProveedores = async (req, res) => {
+    console.log('GET /api/proveedores - Query params:', req.query);
+    
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const offset = (page - 1) * limit;
+        const search = req.query.search || '';
+        const tipo = req.query.tipo || '';
+        const activo = req.query.activo;
 
-    // ==========================================
-    // CRUD PROVEEDORES
-    // ==========================================
+        console.log('Parámetros procesados:', { page, limit, offset, search, tipo, activo });
 
-    // GET /api/proveedores - Listar todos los proveedores con paginación
-    getProveedores: async (req, res) => {
-        try {
-            const { search = '', page = 1, limit = 10, activo = null, tipo = null } = req.query;
+        // Construir la consulta base
+        let whereConditions = ['1=1'];
+        let queryParams = [];
 
-            // Construir query base para contar
-            let countQuery = `
-                SELECT COUNT(*) as total 
-                FROM alt_proveedor p 
-                WHERE 1=1
-            `;
-
-            // Construir query principal
-            let dataQuery = `
-                SELECT 
-                    p.id_proveedor,
-                    p.razon_social,
-                    p.cuit,
-                    p.tipo_proveedor,
-                    p.email_general,
-                    p.telefono_general,
-                    CONCAT(
-                        COALESCE(p.direccion_calle, ''), ' ',
-                        COALESCE(p.direccion_numero, ''), ', ',
-                        COALESCE(p.barrio, ''), ', ',
-                        COALESCE(p.localidad, ''), ', ',
-                        COALESCE(p.provincia, '')
-                    ) AS direccion_completa,
-                    p.activo,
-                    p.fecha_alta,
-                    COUNT(c.id_contacto) AS total_contactos,
-                    CONCAT(
-                        COALESCE(cp.nombre, ''), ' ',
-                        COALESCE(cp.apellido, '')
-                    ) AS contacto_principal
-                FROM alt_proveedor p
-                LEFT JOIN alt_contacto_proveedor c ON p.id_proveedor = c.id_proveedor
-                LEFT JOIN alt_contacto_proveedor cp ON p.id_proveedor = cp.id_proveedor AND cp.principal = TRUE
-                WHERE 1=1
-            `;
-
-            const params = [];
-
-            // Filtro de búsqueda
-            if (search && search.trim()) {
-                const searchCondition = ` AND (
-                    p.razon_social LIKE ? OR 
-                    p.cuit LIKE ? OR 
-                    p.email_general LIKE ? OR
-                    p.localidad LIKE ?
-                )`;
-                countQuery += searchCondition;
-                dataQuery += searchCondition;
-                const searchPattern = `%${search.trim()}%`;
-                params.push(searchPattern, searchPattern, searchPattern, searchPattern);
-            }
-
-            // Filtro por estado activo
-            if (activo !== null) {
-                const activoCondition = ` AND p.activo = ?`;
-                countQuery += activoCondition;
-                dataQuery += activoCondition;
-                params.push(activo === 'true' ? 1 : 0);
-            }
-
-            // Filtro por tipo de proveedor
-            if (tipo && tipo !== 'todos') {
-                const tipoCondition = ` AND p.tipo_proveedor = ?`;
-                countQuery += tipoCondition;
-                dataQuery += tipoCondition;
-                params.push(tipo);
-            }
-
-            // Obtener total de registros
-            const countResult = await executeQuery(countQuery, params);
-            const total = countResult[0]?.total || 0;
-
-            // Agregar GROUP BY, ORDER BY y paginación
-            dataQuery += `
-                GROUP BY p.id_proveedor
-                ORDER BY p.razon_social ASC
-                LIMIT ? OFFSET ?
-            `;
-
-            const pageNum = parseInt(page);
-            const limitNum = parseInt(limit);
-            const offset = (pageNum - 1) * limitNum;
-            params.push(limitNum, offset);
-
-            const proveedores = await executeQuery(dataQuery, params);
-            const totalPages = Math.ceil(total / limitNum);
-
-            res.json({
-                success: true,
-                data: proveedores,
-                pagination: {
-                    total,
-                    page: pageNum,
-                    limit: limitNum,
-                    totalPages
-                }
-            });
-
-        } catch (error) {
-            console.error('Error obteniendo proveedores:', error);
-            res.status(500).json({
-                success: false,
-                message: 'Error al obtener proveedores',
-                error: error.message
-            });
+        // Agregar condición de búsqueda
+        if (search) {
+            whereConditions.push('(p.razon_social LIKE ? OR p.cuit LIKE ? OR p.email_general LIKE ?)');
+            queryParams.push(`%${search}%`, `%${search}%`, `%${search}%`);
         }
-    },
 
-    // GET /api/proveedores/:id - Obtener un proveedor específico con sus contactos
-    getProveedorById: async (req, res) => {
-        try {
-            const { id } = req.params;
-
-            // Obtener datos del proveedor
-            const proveedorQuery = `
-                SELECT * FROM alt_proveedor 
-                WHERE id_proveedor = ?
-            `;
-            const [proveedor] = await executeQuery(proveedorQuery, [id]);
-
-            if (!proveedor) {
-                return res.status(404).json({
-                    success: false,
-                    message: 'Proveedor no encontrado'
-                });
-            }
-
-            // Obtener contactos del proveedor
-            const contactosQuery = `
-                SELECT * FROM alt_contacto_proveedor 
-                WHERE id_proveedor = ?
-                ORDER BY principal DESC, nombre ASC
-            `;
-            const contactos = await executeQuery(contactosQuery, [id]);
-
-            res.json({
-                success: true,
-                data: {
-                    ...proveedor,
-                    contactos
-                }
-            });
-
-        } catch (error) {
-            console.error('Error obteniendo proveedor:', error);
-            res.status(500).json({
-                success: false,
-                message: 'Error al obtener proveedor',
-                error: error.message
-            });
+        // Agregar filtro de tipo
+        if (tipo && tipo !== '' && tipo !== 'todos') {
+            whereConditions.push('p.tipo_proveedor = ?');
+            queryParams.push(tipo);
         }
-    },
 
-    // POST /api/proveedores - Crear nuevo proveedor
-    createProveedor: async (req, res) => {
-        try {
-            const {
-                razon_social,
-                cuit,
-                tipo_proveedor = 'Laboratorio',
-                email_general,
-                telefono_general,
-                direccion_calle,
-                direccion_numero,
-                barrio,
-                localidad,
-                provincia,
-                contactos = []
-            } = req.body;
-
-            // Validaciones básicas
-            if (!razon_social || !cuit) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Razón social y CUIT son obligatorios'
-                });
-            }
-
-            // Verificar si ya existe el CUIT
-            const existeQuery = 'SELECT id_proveedor FROM alt_proveedor WHERE cuit = ?';
-            const existe = await executeQuery(existeQuery, [cuit]);
-
-            if (existe.length > 0) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Ya existe un proveedor con ese CUIT'
-                });
-            }
-
-            // Insertar proveedor
-            const insertProveedorQuery = `
-                INSERT INTO alt_proveedor (
-                    razon_social, cuit, tipo_proveedor, email_general, telefono_general,
-                    direccion_calle, direccion_numero, barrio, localidad, provincia
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            `;
-
-            const result = await executeQuery(insertProveedorQuery, [
-                razon_social, cuit, tipo_proveedor, email_general, telefono_general,
-                direccion_calle, direccion_numero, barrio, localidad, provincia
-            ]);
-
-            const proveedorId = result.insertId;
-
-            // Insertar contactos si se proporcionaron
-            if (contactos && contactos.length > 0) {
-                for (const contacto of contactos) {
-                    await executeQuery(`
-                        INSERT INTO alt_contacto_proveedor (
-                            id_proveedor, nombre, apellido, cargo, email, telefono, principal
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?)
-                    `, [
-                        proveedorId,
-                        contacto.nombre,
-                        contacto.apellido,
-                        contacto.cargo,
-                        contacto.email,
-                        contacto.telefono,
-                        contacto.principal || false
-                    ]);
-                }
-            }
-
-            res.status(201).json({
-                success: true,
-                message: 'Proveedor creado exitosamente',
-                data: { id_proveedor: proveedorId }
-            });
-
-        } catch (error) {
-            console.error('Error creando proveedor:', error);
-            res.status(500).json({
-                success: false,
-                message: 'Error al crear proveedor',
-                error: error.message
-            });
+        // Agregar filtro de estado activo
+        if (activo !== undefined && activo !== '' && activo !== null) {
+            const activoValue = activo === 'true' || activo === true ? 1 : 0;
+            whereConditions.push('p.activo = ?');
+            queryParams.push(activoValue);
         }
-    },
 
-    // PUT /api/proveedores/:id - Actualizar proveedor
-    updateProveedor: async (req, res) => {
-        try {
-            const { id } = req.params;
-            const {
-                razon_social,
-                cuit,
-                tipo_proveedor,
-                email_general,
-                telefono_general,
-                direccion_calle,
-                direccion_numero,
-                barrio,
-                localidad,
-                provincia,
-                activo
-            } = req.body;
+        const whereClause = whereConditions.join(' AND ');
+        console.log('WHERE clause:', whereClause);
+        console.log('Query params para count:', queryParams);
 
-            // Verificar si el proveedor existe
-            const existeQuery = 'SELECT id_proveedor FROM alt_proveedor WHERE id_proveedor = ?';
-            const existe = await executeQuery(existeQuery, [id]);
+        // Obtener el total de registros
+        const countQuery = `
+            SELECT COUNT(*) as total 
+            FROM alt_proveedor p
+            WHERE ${whereClause}
+        `;
+        
+        const [countResult] = await pool.query(countQuery, queryParams);
+        const total = countResult[0].total;
+        
+        console.log('Total registros:', total);
 
-            if (existe.length === 0) {
-                return res.status(404).json({
-                    success: false,
-                    message: 'Proveedor no encontrado'
-                });
-            }
+        // Obtener los proveedores con paginación
+        const dataQuery = `
+            SELECT 
+                p.id_proveedor,
+                p.razon_social,
+                p.cuit,
+                p.tipo_proveedor,
+                CONCAT(
+                    COALESCE(p.direccion_calle, ''), ' ',
+                    COALESCE(p.direccion_numero, ''), ', ',
+                    COALESCE(p.localidad, ''), ', ',
+                    COALESCE(p.provincia, '')
+                ) AS direccion,
+                p.telefono_general,
+                p.email_general,
+                p.activo,
+                p.fecha_alta as created_at,
+                p.fecha_alta as updated_at,
+                (SELECT COUNT(*) FROM alt_contacto_proveedor WHERE id_proveedor = p.id_proveedor) as total_contactos
+            FROM alt_proveedor p
+            WHERE ${whereClause}
+            ORDER BY p.razon_social ASC
+            LIMIT ? OFFSET ?
+        `;
 
-            // Verificar CUIT duplicado (excluyendo el actual)
-            if (cuit) {
-                const cuitQuery = 'SELECT id_proveedor FROM alt_proveedor WHERE cuit = ? AND id_proveedor != ?';
-                const cuitExiste = await executeQuery(cuitQuery, [cuit, id]);
+        // Agregar parámetros de paginación
+        const dataParams = [...queryParams, limit, offset];
+        console.log('Query params para data:', dataParams);
+        
+        const [proveedores] = await pool.query(dataQuery, dataParams);
+        console.log('Proveedores encontrados:', proveedores.length);
 
-                if (cuitExiste.length > 0) {
-                    return res.status(400).json({
-                        success: false,
-                        message: 'Ya existe otro proveedor con ese CUIT'
-                    });
-                }
-            }
+        const response = {
+            success: true,
+            data: proveedores,
+            currentPage: page,
+            totalPages: Math.ceil(total / limit),
+            totalRecords: total,
+            limit
+        };
 
-            // Actualizar proveedor
-            const updateQuery = `
-                UPDATE alt_proveedor SET
-                    razon_social = COALESCE(?, razon_social),
-                    cuit = COALESCE(?, cuit),
-                    tipo_proveedor = COALESCE(?, tipo_proveedor),
-                    email_general = ?,
-                    telefono_general = ?,
-                    direccion_calle = ?,
-                    direccion_numero = ?,
-                    barrio = ?,
-                    localidad = ?,
-                    provincia = ?,
-                    activo = COALESCE(?, activo),
-                    fecha_modificacion = CURRENT_TIMESTAMP
-                WHERE id_proveedor = ?
-            `;
+        console.log('Respuesta enviada:', { ...response, data: `${proveedores.length} registros` });
+        res.json(response);
 
-            await executeQuery(updateQuery, [
-                razon_social, cuit, tipo_proveedor, email_general, telefono_general,
-                direccion_calle, direccion_numero, barrio, localidad, provincia,
-                activo, id
-            ]);
-
-            res.json({
-                success: true,
-                message: 'Proveedor actualizado exitosamente'
-            });
-
-        } catch (error) {
-            console.error('Error actualizando proveedor:', error);
-            res.status(500).json({
-                success: false,
-                message: 'Error al actualizar proveedor',
-                error: error.message
-            });
-        }
-    },
-
-    // DELETE /api/proveedores/:id - Eliminar proveedor (soft delete)
-    deleteProveedor: async (req, res) => {
-        try {
-            const { id } = req.params;
-
-            // Verificar si el proveedor existe
-            const existeQuery = 'SELECT id_proveedor FROM alt_proveedor WHERE id_proveedor = ?';
-            const existe = await executeQuery(existeQuery, [id]);
-
-            if (existe.length === 0) {
-                return res.status(404).json({
-                    success: false,
-                    message: 'Proveedor no encontrado'
-                });
-            }
-
-            // Marcar como inactivo en lugar de eliminar
-            const deleteQuery = 'UPDATE alt_proveedor SET activo = FALSE WHERE id_proveedor = ?';
-            await executeQuery(deleteQuery, [id]);
-
-            res.json({
-                success: true,
-                message: 'Proveedor desactivado exitosamente'
-            });
-
-        } catch (error) {
-            console.error('Error eliminando proveedor:', error);
-            res.status(500).json({
-                success: false,
-                message: 'Error al eliminar proveedor',
-                error: error.message
-            });
-        }
-    },
-
-    // ==========================================
-    // CRUD CONTACTOS
-    // ==========================================
-
-    // GET /api/proveedores/:id/contactos - Obtener contactos de un proveedor
-    getContactosProveedor: async (req, res) => {
-        try {
-            const { id } = req.params;
-
-            const contactosQuery = `
-                SELECT 
-                    c.*,
-                    p.razon_social
-                FROM alt_contacto_proveedor c
-                INNER JOIN alt_proveedor p ON c.id_proveedor = p.id_proveedor
-                WHERE c.id_proveedor = ?
-                ORDER BY c.principal DESC, c.nombre ASC
-            `;
-
-            const contactos = await executeQuery(contactosQuery, [id]);
-
-            res.json({
-                success: true,
-                data: contactos
-            });
-
-        } catch (error) {
-            console.error('Error obteniendo contactos:', error);
-            res.status(500).json({
-                success: false,
-                message: 'Error al obtener contactos',
-                error: error.message
-            });
-        }
-    },
-
-    // POST /api/proveedores/:id/contactos - Agregar contacto a proveedor
-    createContacto: async (req, res) => {
-        try {
-            const { id } = req.params;
-            const { nombre, apellido, cargo, email, telefono, principal = false } = req.body;
-
-            // Validaciones
-            if (!nombre || !apellido) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Nombre y apellido son obligatorios'
-                });
-            }
-
-            // Verificar si el proveedor existe
-            const proveedorExiste = await executeQuery(
-                'SELECT id_proveedor FROM alt_proveedor WHERE id_proveedor = ?',
-                [id]
-            );
-
-            if (proveedorExiste.length === 0) {
-                return res.status(404).json({
-                    success: false,
-                    message: 'Proveedor no encontrado'
-                });
-            }
-
-            // Si se marca como principal, desmarcar otros contactos principales
-            if (principal) {
-                await executeQuery(
-                    'UPDATE alt_contacto_proveedor SET principal = FALSE WHERE id_proveedor = ?',
-                    [id]
-                );
-            }
-
-            // Insertar contacto
-            const insertQuery = `
-                INSERT INTO alt_contacto_proveedor (
-                    id_proveedor, nombre, apellido, cargo, email, telefono, principal
-                ) VALUES (?, ?, ?, ?, ?, ?, ?)
-            `;
-
-            const result = await executeQuery(insertQuery, [
-                id, nombre, apellido, cargo, email, telefono, principal
-            ]);
-
-            res.status(201).json({
-                success: true,
-                message: 'Contacto agregado exitosamente',
-                data: { id_contacto: result.insertId }
-            });
-
-        } catch (error) {
-            console.error('Error creando contacto:', error);
-            res.status(500).json({
-                success: false,
-                message: 'Error al crear contacto',
-                error: error.message
-            });
-        }
-    },
-
-    // PUT /api/proveedores/:id/contactos/:contactoId - Actualizar contacto
-    updateContacto: async (req, res) => {
-        try {
-            const { id, contactoId } = req.params;
-            const { nombre, apellido, cargo, email, telefono, principal } = req.body;
-
-            // Verificar si el contacto existe y pertenece al proveedor
-            const contactoExiste = await executeQuery(
-                'SELECT id_contacto FROM alt_contacto_proveedor WHERE id_contacto = ? AND id_proveedor = ?',
-                [contactoId, id]
-            );
-
-            if (contactoExiste.length === 0) {
-                return res.status(404).json({
-                    success: false,
-                    message: 'Contacto no encontrado'
-                });
-            }
-
-            // Si se marca como principal, desmarcar otros contactos principales
-            if (principal) {
-                await executeQuery(
-                    'UPDATE alt_contacto_proveedor SET principal = FALSE WHERE id_proveedor = ? AND id_contacto != ?',
-                    [id, contactoId]
-                );
-            }
-
-            // Actualizar contacto
-            const updateQuery = `
-                UPDATE alt_contacto_proveedor SET
-                    nombre = COALESCE(?, nombre),
-                    apellido = COALESCE(?, apellido),
-                    cargo = ?,
-                    email = ?,
-                    telefono = ?,
-                    principal = COALESCE(?, principal),
-                    fecha_modificacion = CURRENT_TIMESTAMP
-                WHERE id_contacto = ?
-            `;
-
-            await executeQuery(updateQuery, [
-                nombre, apellido, cargo, email, telefono, principal, contactoId
-            ]);
-
-            res.json({
-                success: true,
-                message: 'Contacto actualizado exitosamente'
-            });
-
-        } catch (error) {
-            console.error('Error actualizando contacto:', error);
-            res.status(500).json({
-                success: false,
-                message: 'Error al actualizar contacto',
-                error: error.message
-            });
-        }
-    },
-
-    // DELETE /api/proveedores/:id/contactos/:contactoId - Eliminar contacto
-    deleteContacto: async (req, res) => {
-        try {
-            const { id, contactoId } = req.params;
-
-            // Verificar si el contacto existe y pertenece al proveedor
-            const contactoExiste = await executeQuery(
-                'SELECT id_contacto FROM alt_contacto_proveedor WHERE id_contacto = ? AND id_proveedor = ?',
-                [contactoId, id]
-            );
-
-            if (contactoExiste.length === 0) {
-                return res.status(404).json({
-                    success: false,
-                    message: 'Contacto no encontrado'
-                });
-            }
-
-            // Eliminar contacto
-            await executeQuery(
-                'DELETE FROM alt_contacto_proveedor WHERE id_contacto = ?',
-                [contactoId]
-            );
-
-            res.json({
-                success: true,
-                message: 'Contacto eliminado exitosamente'
-            });
-
-        } catch (error) {
-            console.error('Error eliminando contacto:', error);
-            res.status(500).json({
-                success: false,
-                message: 'Error al eliminar contacto',
-                error: error.message
-            });
-        }
-    },
-
-    // ==========================================
-    // ENDPOINTS ADICIONALES
-    // ==========================================
-
-    // GET /api/proveedores/tipos - Obtener tipos de proveedores disponibles
-    getTiposProveedores: async (req, res) => {
-        try {
-            const tipos = [
-                { value: 'Laboratorio', label: 'Laboratorio' },
-                { value: 'Droguería', label: 'Droguería' },
-                { value: 'Ambos', label: 'Ambos' }
-            ];
-
-            res.json({
-                success: true,
-                data: tipos
-            });
-
-        } catch (error) {
-            console.error('Error obteniendo tipos:', error);
-            res.status(500).json({
-                success: false,
-                message: 'Error al obtener tipos de proveedores'
-            });
-        }
-    },
-
-    // GET /api/proveedores/estadisticas - Obtener estadísticas de proveedores
-    getEstadisticas: async (req, res) => {
-        try {
-            const estadisticasQuery = `
-                SELECT 
-                    COUNT(*) as total_proveedores,
-                    SUM(CASE WHEN activo = TRUE THEN 1 ELSE 0 END) as proveedores_activos,
-                    SUM(CASE WHEN activo = FALSE THEN 1 ELSE 0 END) as proveedores_inactivos,
-                    SUM(CASE WHEN tipo_proveedor = 'Laboratorio' THEN 1 ELSE 0 END) as laboratorios,
-                    SUM(CASE WHEN tipo_proveedor = 'Droguería' THEN 1 ELSE 0 END) as droguerias,
-                    SUM(CASE WHEN tipo_proveedor = 'Ambos' THEN 1 ELSE 0 END) as ambos
-                FROM alt_proveedor
-            `;
-
-            const contactosQuery = `
-                SELECT COUNT(*) as total_contactos
-                FROM alt_contacto_proveedor
-            `;
-
-            const [estadisticas] = await executeQuery(estadisticasQuery);
-            const [contactos] = await executeQuery(contactosQuery);
-
-            res.json({
-                success: true,
-                data: {
-                    ...estadisticas,
-                    total_contactos: contactos.total_contactos
-                }
-            });
-
-        } catch (error) {
-            console.error('Error obteniendo estadísticas:', error);
-            res.status(500).json({
-                success: false,
-                message: 'Error al obtener estadísticas',
-                error: error.message
-            });
-        }
-    },
-
-    // GET /api/proveedores/buscar - Búsqueda rápida para autocompletar
-    buscarProveedores: async (req, res) => {
-        try {
-            const { q = '', limit = 10 } = req.query;
-
-            if (!q || q.trim().length < 2) {
-                return res.json({
-                    success: true,
-                    data: []
-                });
-            }
-
-            const buscarQuery = `
-                SELECT 
-                    id_proveedor,
-                    razon_social,
-                    cuit,
-                    tipo_proveedor,
-                    email_general,
-                    telefono_general
-                FROM alt_proveedor
-                WHERE activo = TRUE
-                AND (
-                    razon_social LIKE ? OR 
-                    cuit LIKE ? OR 
-                    email_general LIKE ?
-                )
-                ORDER BY razon_social ASC
-                LIMIT ?
-            `;
-
-            const searchPattern = `%${q.trim()}%`;
-            const resultados = await executeQuery(buscarQuery, [
-                searchPattern, searchPattern, searchPattern, parseInt(limit)
-            ]);
-
-            res.json({
-                success: true,
-                data: resultados
-            });
-
-        } catch (error) {
-            console.error('Error en búsqueda:', error);
-            res.status(500).json({
-                success: false,
-                message: 'Error en la búsqueda',
-                error: error.message
-            });
-        }
+    } catch (error) {
+        console.error('Error detallado en getProveedores:', error);
+        console.error('Stack trace:', error.stack);
+        res.status(500).json({
+            success: false,
+            message: 'Error al obtener proveedores',
+            error: error.message,
+            details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
     }
 };
 
-module.exports = proveedoresController;
+// Obtener un proveedor por ID
+const getProveedorById = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const query = `
+            SELECT 
+                p.id_proveedor,
+                p.razon_social,
+                p.cuit,
+                p.tipo_proveedor,
+                CONCAT(
+                    COALESCE(p.direccion_calle, ''), ' ',
+                    COALESCE(p.direccion_numero, ''), ', ',
+                    COALESCE(p.localidad, ''), ', ',
+                    COALESCE(p.provincia, '')
+                ) AS direccion,
+                p.telefono_general,
+                p.email_general,
+                p.observaciones,
+                p.activo,
+                p.fecha_alta as created_at
+            FROM alt_proveedor p
+            WHERE p.id_proveedor = ?
+        `;
+
+        const [rows] = await pool.query(query, [id]);
+
+        if (rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Proveedor no encontrado'
+            });
+        }
+
+        // Obtener los datos con la estructura correcta
+        const proveedor = {
+            id: rows[0].id_proveedor,
+            nombre: rows[0].razon_social,
+            razon_social: rows[0].razon_social,
+            cuit: rows[0].cuit,
+            tipo: rows[0].tipo_proveedor?.toLowerCase() || 'farmacia',
+            direccion: rows[0].direccion,
+            telefono: rows[0].telefono_general,
+            email: rows[0].email_general,
+            observaciones: rows[0].observaciones,
+            activo: rows[0].activo === 1
+        };
+
+        res.json(proveedor);
+
+    } catch (error) {
+        console.error('Error al obtener proveedor:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al obtener proveedor',
+            error: error.message
+        });
+    }
+};
+
+// Crear un nuevo proveedor
+const createProveedor = async (req, res) => {
+    try {
+        const {
+            nombre,
+            razon_social,
+            cuit,
+            tipo,
+            direccion,
+            telefono,
+            email,
+            observaciones,
+            activo = true
+        } = req.body;
+
+        // Usar razon_social o nombre
+        const razonSocialFinal = razon_social || nombre;
+
+        // Verificar si ya existe un proveedor con el mismo CUIT
+        const [existing] = await pool.query(
+            'SELECT id_proveedor FROM alt_proveedor WHERE cuit = ?',
+            [cuit]
+        );
+
+        if (existing.length > 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Ya existe un proveedor con ese CUIT'
+            });
+        }
+
+        // Parsear dirección si viene como string
+        let direccion_calle = '';
+        let direccion_numero = '';
+        let localidad = '';
+        let provincia = '';
+        
+        if (direccion) {
+            const partes = direccion.split(',').map(p => p.trim());
+            if (partes[0]) {
+                const calleNumero = partes[0].split(' ');
+                direccion_numero = calleNumero.pop() || '';
+                direccion_calle = calleNumero.join(' ');
+            }
+            localidad = partes[1] || '';
+            provincia = partes[2] || '';
+        }
+
+        const query = `
+            INSERT INTO alt_proveedor (
+                razon_social, 
+                cuit, 
+                tipo_proveedor, 
+                direccion_calle,
+                direccion_numero,
+                localidad,
+                provincia,
+                telefono_general, 
+                email_general, 
+                observaciones, 
+                activo,
+                fecha_alta
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+        `;
+
+        const tipoProveedor = tipo === 'farmacia' ? 'Farmacia' : 
+                             tipo === 'drogueria' ? 'Droguería' : 
+                             'Droguería';
+
+        const [result] = await pool.query(query, [
+            razonSocialFinal,
+            cuit,
+            tipoProveedor,
+            direccion_calle,
+            direccion_numero,
+            localidad,
+            provincia,
+            telefono,
+            email,
+            observaciones,
+            activo ? 1 : 0
+        ]);
+
+        res.status(201).json({
+            success: true,
+            message: 'Proveedor creado exitosamente',
+            data: {
+                id_proveedor: result.insertId,
+                razon_social: razonSocialFinal,
+                cuit
+            }
+        });
+
+    } catch (error) {
+        console.error('Error al crear proveedor:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al crear proveedor',
+            error: error.message
+        });
+    }
+};
+
+// Actualizar un proveedor
+const updateProveedor = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const {
+            nombre,
+            razon_social,
+            cuit,
+            tipo,
+            direccion,
+            telefono,
+            email,
+            observaciones,
+            activo
+        } = req.body;
+
+        // Verificar si el proveedor existe
+        const [existing] = await pool.query(
+            'SELECT id_proveedor FROM alt_proveedor WHERE id_proveedor = ?',
+            [id]
+        );
+
+        if (existing.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Proveedor no encontrado'
+            });
+        }
+
+        // Verificar si el CUIT ya existe en otro proveedor
+        if (cuit) {
+            const [cuitExists] = await pool.query(
+                'SELECT id_proveedor FROM alt_proveedor WHERE cuit = ? AND id_proveedor != ?',
+                [cuit, id]
+            );
+
+            if (cuitExists.length > 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'El CUIT ya está registrado en otro proveedor'
+                });
+            }
+        }
+
+        const updateFields = [];
+        const values = [];
+
+        const razonSocialFinal = razon_social || nombre;
+        if (razonSocialFinal !== undefined) {
+            updateFields.push('razon_social = ?');
+            values.push(razonSocialFinal);
+        }
+        if (cuit !== undefined) {
+            updateFields.push('cuit = ?');
+            values.push(cuit);
+        }
+        if (tipo !== undefined) {
+            const tipoProveedor = tipo === 'farmacia' ? 'Farmacia' : 
+                                 tipo === 'drogueria' ? 'Droguería' : 
+                                 'Droguería';
+            updateFields.push('tipo_proveedor = ?');
+            values.push(tipoProveedor);
+        }
+        if (direccion !== undefined) {
+            // Parsear dirección
+            const partes = direccion.split(',').map(p => p.trim());
+            if (partes[0]) {
+                const calleNumero = partes[0].split(' ');
+                const direccion_numero = calleNumero.pop() || '';
+                const direccion_calle = calleNumero.join(' ');
+                updateFields.push('direccion_calle = ?', 'direccion_numero = ?');
+                values.push(direccion_calle, direccion_numero);
+            }
+            if (partes[1]) {
+                updateFields.push('localidad = ?');
+                values.push(partes[1]);
+            }
+            if (partes[2]) {
+                updateFields.push('provincia = ?');
+                values.push(partes[2]);
+            }
+        }
+        if (telefono !== undefined) {
+            updateFields.push('telefono_general = ?');
+            values.push(telefono);
+        }
+        if (email !== undefined) {
+            updateFields.push('email_general = ?');
+            values.push(email);
+        }
+        if (observaciones !== undefined) {
+            updateFields.push('observaciones = ?');
+            values.push(observaciones);
+        }
+        if (activo !== undefined) {
+            updateFields.push('activo = ?');
+            values.push(activo ? 1 : 0);
+        }
+
+        if (updateFields.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'No se proporcionaron campos para actualizar'
+            });
+        }
+
+        values.push(id);
+
+        const query = `
+            UPDATE alt_proveedor 
+            SET ${updateFields.join(', ')}
+            WHERE id_proveedor = ?
+        `;
+
+        await pool.query(query, values);
+
+        res.json({
+            success: true,
+            message: 'Proveedor actualizado exitosamente'
+        });
+
+    } catch (error) {
+        console.error('Error al actualizar proveedor:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al actualizar proveedor',
+            error: error.message
+        });
+    }
+};
+
+// Eliminar (desactivar) un proveedor
+const deleteProveedor = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const [result] = await pool.query(
+            'UPDATE alt_proveedor SET activo = 0 WHERE id_proveedor = ?',
+            [id]
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Proveedor no encontrado'
+            });
+        }
+
+        res.json({
+            success: true,
+            message: 'Proveedor desactivado exitosamente'
+        });
+
+    } catch (error) {
+        console.error('Error al eliminar proveedor:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al eliminar proveedor',
+            error: error.message
+        });
+    }
+};
+
+// Obtener contactos de un proveedor
+const getContactosByProveedor = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const query = `
+            SELECT 
+                id_contacto,
+                CONCAT(COALESCE(nombre, ''), ' ', COALESCE(apellido, '')) as nombre,
+                cargo,
+                telefono,
+                email,
+                observaciones,
+                fecha_alta as created_at,
+                fecha_alta as updated_at
+            FROM alt_contacto_proveedor
+            WHERE id_proveedor = ?
+            ORDER BY nombre ASC
+        `;
+
+        const [contactos] = await pool.query(query, [id]);
+
+        res.json({
+            success: true,
+            data: contactos
+        });
+
+    } catch (error) {
+        console.error('Error al obtener contactos:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al obtener contactos',
+            error: error.message
+        });
+    }
+};
+
+// Crear un contacto para un proveedor
+const createContacto = async (req, res) => {
+    try {
+        const {
+            proveedor_id,
+            nombre,
+            cargo,
+            telefono,
+            email,
+            observaciones
+        } = req.body;
+
+        // Verificar que el proveedor existe
+        const [proveedor] = await pool.query(
+            'SELECT id_proveedor FROM alt_proveedor WHERE id_proveedor = ?',
+            [proveedor_id]
+        );
+
+        if (proveedor.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Proveedor no encontrado'
+            });
+        }
+
+        // Separar nombre y apellido
+        const nombrePartes = nombre.split(' ');
+        const apellido = nombrePartes.length > 1 ? nombrePartes.pop() : '';
+        const nombreFinal = nombrePartes.join(' ');
+
+        const query = `
+            INSERT INTO alt_contacto_proveedor (
+                id_proveedor,
+                nombre,
+                apellido,
+                cargo,
+                telefono,
+                email,
+                observaciones,
+                fecha_alta
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
+        `;
+
+        const [result] = await pool.query(query, [
+            proveedor_id,
+            nombreFinal,
+            apellido,
+            cargo,
+            telefono,
+            email,
+            observaciones
+        ]);
+
+        res.status(201).json({
+            success: true,
+            message: 'Contacto creado exitosamente',
+            data: {
+                id_contacto: result.insertId,
+                nombre
+            }
+        });
+
+    } catch (error) {
+        console.error('Error al crear contacto:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al crear contacto',
+            error: error.message
+        });
+    }
+};
+
+// Actualizar un contacto
+const updateContacto = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const {
+            nombre,
+            cargo,
+            telefono,
+            email,
+            observaciones
+        } = req.body;
+
+        const updateFields = [];
+        const values = [];
+
+        if (nombre !== undefined) {
+            const nombrePartes = nombre.split(' ');
+            const apellido = nombrePartes.length > 1 ? nombrePartes.pop() : '';
+            const nombreFinal = nombrePartes.join(' ');
+            updateFields.push('nombre = ?', 'apellido = ?');
+            values.push(nombreFinal, apellido);
+        }
+        if (cargo !== undefined) {
+            updateFields.push('cargo = ?');
+            values.push(cargo);
+        }
+        if (telefono !== undefined) {
+            updateFields.push('telefono = ?');
+            values.push(telefono);
+        }
+        if (email !== undefined) {
+            updateFields.push('email = ?');
+            values.push(email);
+        }
+        if (observaciones !== undefined) {
+            updateFields.push('observaciones = ?');
+            values.push(observaciones);
+        }
+
+        if (updateFields.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'No se proporcionaron campos para actualizar'
+            });
+        }
+
+        values.push(id);
+
+        const query = `
+            UPDATE alt_contacto_proveedor 
+            SET ${updateFields.join(', ')}
+            WHERE id_contacto = ?
+        `;
+
+        const [result] = await pool.query(query, values);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Contacto no encontrado'
+            });
+        }
+
+        res.json({
+            success: true,
+            message: 'Contacto actualizado exitosamente'
+        });
+
+    } catch (error) {
+        console.error('Error al actualizar contacto:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al actualizar contacto',
+            error: error.message
+        });
+    }
+};
+
+// Eliminar un contacto
+const deleteContacto = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const [result] = await pool.query(
+            'DELETE FROM alt_contacto_proveedor WHERE id_contacto = ?',
+            [id]
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Contacto no encontrado'
+            });
+        }
+
+        res.json({
+            success: true,
+            message: 'Contacto eliminado exitosamente'
+        });
+
+    } catch (error) {
+        console.error('Error al eliminar contacto:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al eliminar contacto',
+            error: error.message
+        });
+    }
+};
+
+// Exportar proveedores a Excel
+const exportProveedoresToExcel = async (req, res) => {
+    try {
+        const { search = '', tipo = '', activo } = req.query;
+
+        // Construir la consulta
+        let whereConditions = ['1=1'];
+        let queryParams = [];
+
+        if (search) {
+            whereConditions.push('(razon_social LIKE ? OR cuit LIKE ?)');
+            queryParams.push(`%${search}%`, `%${search}%`);
+        }
+
+        if (tipo && tipo !== 'todos') {
+            whereConditions.push('tipo_proveedor = ?');
+            queryParams.push(tipo);
+        }
+
+        if (activo !== undefined && activo !== '') {
+            whereConditions.push('activo = ?');
+            queryParams.push(activo === 'true' ? 1 : 0);
+        }
+
+        const whereClause = whereConditions.join(' AND ');
+
+        const query = `
+            SELECT 
+                razon_social as 'Razón Social',
+                cuit as 'CUIT',
+                tipo_proveedor as 'Tipo',
+                CONCAT(
+                    COALESCE(direccion_calle, ''), ' ',
+                    COALESCE(direccion_numero, ''), ', ',
+                    COALESCE(localidad, ''), ', ',
+                    COALESCE(provincia, '')
+                ) as 'Dirección',
+                telefono_general as 'Teléfono',
+                email_general as 'Email',
+                CASE WHEN activo = 1 THEN 'Activo' ELSE 'Inactivo' END as 'Estado'
+            FROM alt_proveedor
+            WHERE ${whereClause}
+            ORDER BY razon_social ASC
+        `;
+
+        const [proveedores] = await pool.query(query, queryParams);
+
+        // Aquí deberías implementar la generación del Excel
+        // Por ahora devolvemos los datos en JSON
+        res.json({
+            success: true,
+            data: proveedores,
+            message: 'Funcionalidad de exportación a Excel pendiente de implementación'
+        });
+
+    } catch (error) {
+        console.error('Error al exportar proveedores:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al exportar proveedores',
+            error: error.message
+        });
+    }
+};
+
+module.exports = {
+    getProveedores,
+    getProveedorById,
+    createProveedor,
+    updateProveedor,
+    deleteProveedor,
+    getContactosByProveedor,
+    createContacto,
+    updateContacto,
+    deleteContacto,
+    exportProveedoresToExcel
+};

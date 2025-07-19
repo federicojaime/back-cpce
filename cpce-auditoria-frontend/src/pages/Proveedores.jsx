@@ -1,47 +1,23 @@
 // src/pages/Proveedores.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { proveedoresService } from '../services/proveedoresService';
-import TableWithFilters from '../components/common/TableWithFilters';
-import {
-    PlusIcon,
-    EyeIcon,
-    PencilIcon,
-    TrashIcon,
-    ArrowPathIcon,
-    BuildingOfficeIcon,
-    UserGroupIcon,
-    CheckCircleIcon,
-    XCircleIcon
-} from '@heroicons/react/24/outline';
+import { PlusIcon, PencilIcon, EyeIcon, TrashIcon, UserGroupIcon } from '@heroicons/react/24/outline';
+import { getProveedores, deleteProveedor, exportProveedoresToExcel } from '../services/proveedoresService';
+import DataTable from '../components/common/DataTable';
+import SearchBar from '../components/common/SearchBar';
+import Loading from '../components/common/Loading';
+import ErrorMessage from '../components/common/ErrorMessage';
 
 const Proveedores = () => {
     const [proveedores, setProveedores] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState('');
-    const [refreshing, setRefreshing] = useState(false);
+    const [error, setError] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
     const [filters, setFilters] = useState({
-        page: 1,
-        limit: 10,
-        activo: true,
-        tipo: 'todos'
-    });
-
-    const [pagination, setPagination] = useState({
-        total: 0,
-        totalPages: 0,
-        currentPage: 1
-    });
-
-    const [stats, setStats] = useState({
-        total_proveedores: 0,
-        proveedores_activos: 0,
-        proveedores_inactivos: 0,
-        laboratorios: 0,
-        droguerias: 0,
-        ambos: 0,
-        total_contactos: 0
+        tipo: '',
+        activo: ''
     });
 
     // Breadcrumb configuration
@@ -118,22 +94,12 @@ const Proveedores = () => {
                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                     row.activo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                 }`}>
-                    {row.activo ? (
-                        <>
-                            <CheckCircleIcon className="h-3 w-3 mr-1" />
-                            Activo
-                        </>
-                    ) : (
-                        <>
-                            <XCircleIcon className="h-3 w-3 mr-1" />
-                            Inactivo
-                        </>
-                    )}
+                    {row.activo ? 'Activo' : 'Inactivo'}
                 </span>
             )
         },
-        { 
-            key: 'acciones', 
+        {
+            key: 'acciones',
             label: 'Acciones',
             align: 'center',
             className: 'text-center',
@@ -172,15 +138,16 @@ const Proveedores = () => {
             setError('');
 
             const params = {
-                ...filters,
-                search: searchTerm
+                page: currentPage,
+                search: searchTerm,
+                ...filters
             };
 
-            const result = await proveedoresService.getProveedores(params);
+            const result = await getProveedores(params);
 
             if (result.success) {
                 setProveedores(result.data);
-                setPagination(result.pagination);
+                setTotalPages(result.totalPages);
             } else {
                 setError(result.message);
                 setProveedores([]);
@@ -191,32 +158,18 @@ const Proveedores = () => {
             setProveedores([]);
         } finally {
             setLoading(false);
-            setRefreshing(false);
         }
-    }, [searchTerm, filters]);
-
-    // Cargar estadísticas
-    const loadStats = useCallback(async () => {
-        try {
-            const result = await proveedoresService.getEstadisticas();
-            if (result.success) {
-                setStats(result.data);
-            }
-        } catch (error) {
-            console.error('Error cargando estadísticas:', error);
-        }
-    }, []);
+    }, [searchTerm, filters, currentPage]);
 
     // Efectos
     useEffect(() => {
         loadProveedores();
-        loadStats();
-    }, [loadProveedores, loadStats]);
+    }, [loadProveedores]);
 
     // Debounce para búsqueda
     useEffect(() => {
         const timeoutId = setTimeout(() => {
-            setFilters(prev => ({ ...prev, page: 1 }));
+            setCurrentPage(1);
         }, 300);
 
         return () => clearTimeout(timeoutId);
@@ -229,11 +182,10 @@ const Proveedores = () => {
         }
 
         try {
-            const result = await proveedoresService.deleteProveedor(id);
+            const result = await deleteProveedor(id);
             
             if (result.success) {
-                await loadProveedores(false);
-                await loadStats();
+                await loadProveedores();
             } else {
                 setError(result.message);
             }
@@ -243,26 +195,25 @@ const Proveedores = () => {
         }
     };
 
-    const handleRefresh = async () => {
-        setRefreshing(true);
-        await loadProveedores(false);
-        await loadStats();
+    const handleExport = async () => {
+        try {
+            await exportProveedoresToExcel({ ...filters, search: searchTerm });
+        } catch (err) {
+            setError('Error al exportar los datos');
+        }
     };
 
-    const handleSearchChange = (value) => {
+    const handleSearch = (value) => {
         setSearchTerm(value);
+        setCurrentPage(1);
     };
 
     const handlePageChange = (newPage) => {
-        setFilters(prev => ({ ...prev, page: newPage }));
-    };
-
-    const handlePageSizeChange = (newSize) => {
-        setFilters(prev => ({ ...prev, limit: newSize, page: 1 }));
+        setCurrentPage(newPage);
     };
 
     const handleFilterChange = (key, value) => {
-        setFilters(prev => ({ ...prev, [key]: value, page: 1 }));
+        setFilters(prev => ({ ...prev, [key]: value }));
     };
 
     // Filtros adicionales
@@ -304,12 +255,10 @@ const Proveedores = () => {
     const actions = (
         <>
             <button
-                onClick={handleRefresh}
-                disabled={refreshing}
-                className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                onClick={handleExport}
+                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             >
-                <ArrowPathIcon className={`h-5 w-5 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-                {refreshing ? 'Actualizando...' : 'Actualizar'}
+                Exportar Excel
             </button>
 
             <Link
@@ -322,63 +271,57 @@ const Proveedores = () => {
         </>
     );
 
-    // Información adicional con estadísticas
-    const additionalInfo = (
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-            <h3 className="text-sm font-medium text-gray-900 mb-3">Estadísticas</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="text-center">
-                    <div className="text-2xl font-bold text-blue-600">{stats.total_proveedores}</div>
-                    <div className="text-xs text-gray-500">Total</div>
-                </div>
-                <div className="text-center">
-                    <div className="text-2xl font-bold text-green-600">{stats.proveedores_activos}</div>
-                    <div className="text-xs text-gray-500">Activos</div>
-                </div>
-                <div className="text-center">
-                    <div className="text-2xl font-bold text-blue-600">{stats.laboratorios}</div>
-                    <div className="text-xs text-gray-500">Laboratorios</div>
-                </div>
-                <div className="text-center">
-                    <div className="text-2xl font-bold text-purple-600">{stats.total_contactos}</div>
-                    <div className="text-xs text-gray-500">Contactos</div>
-                </div>
-            </div>
-        </div>
-    );
+    if (loading) return <Loading text="Cargando proveedores..." />;
 
     return (
-        <div className="space-y-6">
-            {/* Filtros personalizados */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-                <div className="px-6 py-4">
-                    <h3 className="text-lg font-medium text-gray-900 mb-4">Filtros de Búsqueda</h3>
-                    {extraFilters}
+        <div className="container mx-auto px-4 py-8">
+            <div className="mb-6">
+                <div className="flex items-center justify-between mb-4">
+                    <h1 className="text-2xl font-bold text-gray-900">Proveedores</h1>
+                    <div className="flex space-x-3">
+                        {actions}
+                    </div>
+                </div>
+
+                <div className="flex items-center space-x-4 mb-4">
+                    <div className="flex-1">
+                        <SearchBar
+                            value={searchTerm}
+                            onChange={handleSearch}
+                            placeholder="Buscar por nombre, CUIT..."
+                        />
+                    </div>
+                    <select
+                        value={filters.tipo}
+                        onChange={(e) => setFilters({ ...filters, tipo: e.target.value })}
+                        className="rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    >
+                        <option value="">Todos los tipos</option>
+                        <option value="Laboratorio">Laboratorio</option>
+                        <option value="Droguería">Droguería</option>
+                    </select>
+                    <select
+                        value={filters.activo}
+                        onChange={(e) => setFilters({ ...filters, activo: e.target.value })}
+                        className="rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    >
+                        <option value="">Todos los estados</option>
+                        <option value="true">Activos</option>
+                        <option value="false">Inactivos</option>
+                    </select>
                 </div>
             </div>
 
-            {/* Tabla principal */}
-            <TableWithFilters
-                title="Gestión de Proveedores"
-                subtitle="Administrar proveedores de medicación de alto costo"
-                breadcrumbItems={breadcrumbItems}
-                data={proveedores}
+            {error && <ErrorMessage message={error} />}
+
+            <DataTable
                 columns={columns}
-                loading={loading}
-                error={error}
-                refreshing={refreshing}
-                searchValue={searchTerm}
-                searchPlaceholder="Buscar por razón social, CUIT, email o localidad..."
-                onSearchChange={handleSearchChange}
-                pagination={pagination}
-                pageSize={filters.limit}
-                onPageChange={handlePageChange}
-                onPageSizeChange={handlePageSizeChange}
-                actions={actions}
-                onRefresh={handleRefresh}
-                emptyMessage="No hay proveedores registrados"
-                emptySearchMessage="No se encontraron proveedores que coincidan con la búsqueda"
-                additionalInfo={additionalInfo}
+                data={proveedores}
+                pagination={{
+                    currentPage,
+                    totalPages,
+                    onPageChange: setCurrentPage
+                }}
             />
         </div>
     );

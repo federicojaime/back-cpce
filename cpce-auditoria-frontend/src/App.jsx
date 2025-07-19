@@ -308,7 +308,7 @@ function App() {
   return (
     <AuthProvider>
       <Router>
-        <div className="App">5
+        <div className="App">
           <AppContent />
         </div>
       </Router>
