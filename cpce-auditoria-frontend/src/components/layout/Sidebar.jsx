@@ -1,4 +1,4 @@
-// src/components/layout/Sidebar.jsx
+// src/components/layout/Sidebar.jsx - ACTUALIZADO CON PROVEEDORES
 import React, { useState } from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -11,16 +11,22 @@ import {
     UserIcon,
     DocumentArrowDownIcon,
     BookOpenIcon,
+    BuildingOfficeIcon,
+    UserGroupIcon,
+    PlusIcon,
     ChevronDownIcon,
     ChevronRightIcon
 } from '@heroicons/react/24/outline';
 
 const Sidebar = () => {
-    const [expandedMenus, setExpandedMenus] = useState({ auditoria: true });
+    const [expandedMenus, setExpandedMenus] = useState({ 
+        auditoria: true, 
+        proveedores: true 
+    });
     const location = useLocation();
     const { user } = useAuth();
 
-    // Configuración de navegación
+    // Configuración de navegación actualizada
     const navigationConfig = [
         {
             id: 'auditoria',
@@ -56,6 +62,31 @@ const Sidebar = () => {
                     name: 'Descargar (Excel)',
                     href: '/descargar-excel',
                     icon: DocumentArrowDownIcon
+                }
+            ]
+        },
+        {
+            id: 'proveedores',
+            name: 'Proveedores',
+            icon: BuildingOfficeIcon,
+            children: [
+                {
+                    id: 'lista-proveedores',
+                    name: 'Lista de Proveedores',
+                    href: '/proveedores',
+                    icon: BuildingOfficeIcon
+                },
+                {
+                    id: 'nuevo-proveedor',
+                    name: 'Nuevo Proveedor',
+                    href: '/proveedores/nuevo',
+                    icon: PlusIcon
+                },
+                {
+                    id: 'contactos',
+                    name: 'Gestión de Contactos',
+                    href: '/proveedores/contactos',
+                    icon: UserGroupIcon
                 }
             ]
         },

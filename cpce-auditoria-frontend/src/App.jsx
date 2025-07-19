@@ -1,4 +1,4 @@
-// src/App.jsx
+// src/App.jsx - ACTUALIZADO CON RUTAS DE PROVEEDORES
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -6,7 +6,7 @@ import Layout from './components/layout/Layout';
 import Login from './components/auth/Login';
 import Loading from './components/common/Loading';
 
-// Páginas
+// Páginas de Auditorías
 import Dashboard from './pages/Dashboard';
 import AuditoriasPendientes from './pages/AuditoriasPendientes';
 import AuditoriasHistoricas from './pages/AuditoriasHistoricas';
@@ -16,6 +16,12 @@ import DescargarExcel from './pages/DescargarExcel';
 import Vademecum from './pages/Vademecum';
 import ProcesarAuditoria from './pages/ProcesarAuditoria';
 import VerAuditoriaHistorica from './pages/VerAuditoriaHistorica';
+
+// Páginas de Proveedores
+import Proveedores from './pages/Proveedores';
+import ProveedorDetalle from './pages/ProveedorDetalle';
+import ProveedorForm from './pages/ProveedorForm';
+import ContactosProveedor from './pages/ContactosProveedor';
 
 // Componente para rutas protegidas
 const ProtectedRoute = ({ children }) => {
@@ -65,7 +71,7 @@ function AppContent() {
         }
       />
 
-      {/* Rutas protegidas */}
+      {/* Rutas protegidas - Dashboard */}
       <Route
         path="/"
         element={
@@ -75,6 +81,7 @@ function AppContent() {
         }
       />
 
+      {/* Rutas protegidas - Auditorías */}
       <Route
         path="/pendientes"
         element={
@@ -129,7 +136,7 @@ function AppContent() {
         }
       />
 
-      {/* Ruta para procesar auditoría específica */}
+      {/* Rutas para procesar auditorías */}
       <Route
         path="/auditoria/:id"
         element={
@@ -139,12 +146,73 @@ function AppContent() {
         }
       />
 
-      {/* Nueva ruta para ver auditoría histórica */}
       <Route
         path="/auditoria/:id/historica"
         element={
           <ProtectedRoute>
             <VerAuditoriaHistorica />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* ===== RUTAS DE PROVEEDORES ===== */}
+      
+      {/* Lista de proveedores */}
+      <Route
+        path="/proveedores"
+        element={
+          <ProtectedRoute>
+            <Proveedores />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Crear nuevo proveedor */}
+      <Route
+        path="/proveedores/nuevo"
+        element={
+          <ProtectedRoute>
+            <ProveedorForm />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Ver detalle de proveedor */}
+      <Route
+        path="/proveedores/:id"
+        element={
+          <ProtectedRoute>
+            <ProveedorDetalle />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Editar proveedor */}
+      <Route
+        path="/proveedores/:id/editar"
+        element={
+          <ProtectedRoute>
+            <ProveedorForm />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Gestión de contactos */}
+      <Route
+        path="/proveedores/contactos"
+        element={
+          <ProtectedRoute>
+            <ContactosProveedor />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Gestión de contactos de un proveedor específico */}
+      <Route
+        path="/proveedores/:id/contactos"
+        element={
+          <ProtectedRoute>
+            <ContactosProveedor />
           </ProtectedRoute>
         }
       />
@@ -240,15 +308,8 @@ function App() {
   return (
     <AuthProvider>
       <Router>
-        <div className="App">
-          {/* Aquí podrías agregar componentes globales como notificaciones, modales, etc. */}
+        <div className="App">5
           <AppContent />
-
-          {/* Componente global para notificaciones toast (si lo implementas) */}
-          {/* <ToastContainer /> */}
-
-          {/* Modal global para confirmaciones (si lo implementas) */}
-          {/* <ConfirmModal /> */}
         </div>
       </Router>
     </AuthProvider>
