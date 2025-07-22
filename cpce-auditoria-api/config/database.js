@@ -15,6 +15,27 @@ const pool = mysql.createPool({
     keepAliveInitialDelay: 0
 });
 
+// Función helper para ejecutar consultas
+const executeQuery = async (sql, params = []) => {
+    try {
+        const [rows] = await pool.execute(sql, params);
+        return rows;
+    } catch (error) {
+        console.error('Error ejecutando consulta SQL:', error);
+        throw error;
+    }
+};
+
+// Función para obtener conexión del pool
+const getConnection = async () => {
+    try {
+        return await pool.getConnection();
+    } catch (error) {
+        console.error('Error obteniendo conexión:', error);
+        throw error;
+    }
+};
+
 // Verificar la conexión
 pool.getConnection()
     .then(connection => {
@@ -25,4 +46,7 @@ pool.getConnection()
         console.error('❌ Error conectando a la base de datos:', err);
     });
 
+// Exportar tanto el pool como las funciones helper
 module.exports = pool;
+module.exports.executeQuery = executeQuery;
+module.exports.getConnection = getConnection;
